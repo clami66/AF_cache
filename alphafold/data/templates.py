@@ -953,6 +953,7 @@ class HmmsearchHitFeaturizer(TemplateHitFeaturizer):
       sorted_hits = sorted(hits, key=lambda x: x.sum_probs, reverse=True)
 
     for hit in sorted_hits:
+      #logging.info('Hits processed: %d', len(already_seen))
       # We got all the templates we wanted, stop processing hits.
       if len(already_seen) >= self._max_hits:
         break
@@ -982,8 +983,8 @@ class HmmsearchHitFeaturizer(TemplateHitFeaturizer):
         already_seen_key = result.features['template_sequence']
         #print(f"This template sequence is: {result.features['template_sequence']}")
         if already_seen_key in already_seen:
-          #continue
-          pass
+          continue
+          #pass
         # Increment the hit counter, since we got features out of this hit.
         already_seen.add(already_seen_key)
         for k in template_features:

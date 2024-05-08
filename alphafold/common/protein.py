@@ -269,10 +269,20 @@ def from_prediction(
   if b_factors is None:
     b_factors = np.zeros_like(fold_output['final_atom_mask'])
 
-  return Protein(
-      aatype=_maybe_remove_leading_dim(features['aatype']),
-      atom_positions=fold_output['final_atom_positions'],
-      atom_mask=fold_output['final_atom_mask'],
-      residue_index=_maybe_remove_leading_dim(features['residue_index']) + 1,
-      chain_index=chain_index,
-      b_factors=b_factors)
+  if "original_seq_length" in features: # avoid issues with amber relax later on if sequence length was padded
+    o_seq_l = features["original_seq_length"]
+    return Protein(
+        aatype=_maybe_remove_leading_dim(np.delete(features["aatype"], np.s_[o_seq_l:], 0)),
+        atom_positions=np.delete(fold_output["final_atom_positions"], np.s_[o_seq_l:], 0),
+        atom_mask=np.delete(fold_output["final_atom_mask"], np.s_[o_seq_l:], 0),
+        residue_index=np.delete(features["residue_index"], np.s_[o_seq_l:], 0),
+        chain_index=chain_index,
+        b_factors=np.delete(b_factors, np.s_[o_seq_l:], 0))
+  else:
+    return Protein(
+        aatype=_maybe_remove_leading_dim(features['aatype']),
+        atom_positions=fold_output['final_atom_positions'],
+        atom_mask=fold_output['final_atom_mask'],
+        residue_index=_maybe_remove_leading_dim(features['residue_index']) + 1,
+        chain_index=chain_index,
+        b_factors=b_factors)

@@ -420,7 +420,6 @@ def make_fixed_size(protein, shape_schema, msa_cluster_size, extra_msa_size,
       NUM_EXTRA_SEQ: extra_msa_size,
       NUM_TEMPLATES: num_templates,
   }
-
   for k, v in protein.items():
     # Don't transfer this to the accelerator.
     if k == 'extra_cluster_assignment':

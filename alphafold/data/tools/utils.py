@@ -22,9 +22,9 @@ from absl import logging
 
 
 @contextlib.contextmanager
-def tmpdir_manager(base_dir: Optional[str] = None):
+def tmpdir_manager(base_dir: Optional[str] = None, prefix: Optional[str] = None):
   """Context manager that deletes a temporary directory on exit."""
-  tmpdir = tempfile.mkdtemp(dir=base_dir)
+  tmpdir = tempfile.mkdtemp(dir=base_dir, prefix=prefix)
   try:
     yield tmpdir
   finally:

@@ -15,6 +15,7 @@
 """Code to generate processed features."""
 import copy
 from typing import List, Mapping, Tuple
+from absl import logging
 
 from alphafold.model.tf import input_pipeline
 from alphafold.model.tf import proteins_dataset
@@ -45,9 +46,13 @@ def make_data_config(
 
 def tf_example_to_features(tf_example: tf.train.Example,
                            config: ml_collections.ConfigDict,
-                           random_seed: int = 0) -> FeatureDict:
+                           random_seed: int = 0,
+                           pad_length: int = None) -> FeatureDict:
   """Converts tf_example to numpy feature dictionary."""
   num_res = int(tf_example.features.feature['seq_length'].int64_list.value[0])
+  num_res = pad_length if pad_length else num_res
+  if pad_length:
+    logging.info("Padding sequences to length (tf): %d", num_res)
   cfg, feature_names = make_data_config(config, num_res=num_res)
 
   if 'deletion_matrix_int' in set(tf_example.features.feature):
@@ -77,10 +82,14 @@ def tf_example_to_features(tf_example: tf.train.Example,
 
 def np_example_to_features(np_example: FeatureDict,
                            config: ml_collections.ConfigDict,
-                           random_seed: int = 0) -> FeatureDict:
+                           random_seed: int = 0,
+                           pad_length: int = None) -> FeatureDict:
   """Preprocesses NumPy feature dict using TF pipeline."""
   np_example = dict(np_example)
   num_res = int(np_example['seq_length'][0])
+  num_res = pad_length if pad_length else num_res
+  if pad_length:
+    logging.info("Padding sequences to length (np): %d", num_res)
   cfg, feature_names = make_data_config(config, num_res=num_res)
 
   if 'deletion_matrix_int' in np_example:

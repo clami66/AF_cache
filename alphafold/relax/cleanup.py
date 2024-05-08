@@ -23,7 +23,6 @@ import pdbfixer
 from simtk.openmm import app
 from simtk.openmm.app import element
 
-
 def fix_pdb(pdbfile, alterations_info):
   """Apply pdbfixer to the contents of a PDB file; return a PDB string result.
 

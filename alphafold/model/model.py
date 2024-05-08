@@ -22,6 +22,7 @@ from alphafold.model import modules
 from alphafold.model import modules_multimer
 import haiku as hk
 import jax
+
 import ml_collections
 import numpy as np
 import tensorflow.compat.v1 as tf
@@ -30,25 +31,31 @@ import tree
 
 def get_confidence_metrics(
     prediction_result: Mapping[str, Any],
-    multimer_mode: bool) -> Mapping[str, Any]:
+    multimer_mode: bool,
+    original_length=None) -> Mapping[str, Any]:
+  
+  if original_length:
+    length_slice = np.s_[:original_length]
+  else:
+    length_slice = np.s_[:]
   """Post processes prediction_result to get confidence metrics."""
   confidence_metrics = {}
   confidence_metrics['plddt'] = confidence.compute_plddt(
-      prediction_result['predicted_lddt']['logits'])
+      prediction_result['predicted_lddt']['logits'][length_slice])
   if 'predicted_aligned_error' in prediction_result:
     confidence_metrics.update(confidence.compute_predicted_aligned_error(
-        logits=prediction_result['predicted_aligned_error']['logits'],
+        logits=prediction_result['predicted_aligned_error']['logits'][length_slice, length_slice],
         breaks=prediction_result['predicted_aligned_error']['breaks']))
     confidence_metrics['ptm'] = confidence.predicted_tm_score(
-        logits=prediction_result['predicted_aligned_error']['logits'],
+        logits=prediction_result['predicted_aligned_error']['logits'][length_slice, length_slice],
         breaks=prediction_result['predicted_aligned_error']['breaks'],
         asym_id=None)
     if multimer_mode:
       # Compute the ipTM only for the multimer model.
       confidence_metrics['iptm'] = confidence.predicted_tm_score(
-          logits=prediction_result['predicted_aligned_error']['logits'],
+          logits=prediction_result['predicted_aligned_error']['logits'][length_slice, length_slice],
           breaks=prediction_result['predicted_aligned_error']['breaks'],
-          asym_id=prediction_result['predicted_aligned_error']['asym_id'],
+          asym_id=prediction_result['predicted_aligned_error']['asym_id'][length_slice],
           interface=True)
       confidence_metrics['ranking_confidence'] = (
           0.8 * confidence_metrics['iptm'] + 0.2 * confidence_metrics['ptm'])
@@ -111,7 +118,8 @@ class RunModel:
   def process_features(
       self,
       raw_features: Union[tf.train.Example, features.FeatureDict],
-      random_seed: int) -> features.FeatureDict:
+      random_seed: int,
+      pad_length: int) -> features.FeatureDict:
     """Processes features to prepare for feeding them into the model.
 
     Args:
@@ -126,17 +134,21 @@ class RunModel:
     if self.multimer_mode:
       return raw_features
 
+    if pad_length:
+      raw_features["original_seq_length"] = raw_features["seq_length"]
     # Single-chain mode.
     if isinstance(raw_features, dict):
       return features.np_example_to_features(
           np_example=raw_features,
           config=self.config,
-          random_seed=random_seed)
+          random_seed=random_seed,
+          pad_length=pad_length)
     else:
       return features.tf_example_to_features(
           tf_example=raw_features,
           config=self.config,
-          random_seed=random_seed)
+          random_seed=random_seed,
+          pad_length=pad_length)
 
   def eval_shape(self, feat: features.FeatureDict) -> jax.ShapeDtypeStruct:
     self.init_params(feat)
@@ -169,9 +181,14 @@ class RunModel:
     # This block is to ensure benchmark timings are accurate. Some blocking is
     # already happening when computing get_confidence_metrics, and this ensures
     # all outputs are blocked on.
+    if "original_seq_length" in feat:
+      o_seq_l = feat["original_seq_length"]
+    else:
+      o_seq_l = None
+
     jax.tree_map(lambda x: x.block_until_ready(), result)
     result.update(
-        get_confidence_metrics(result, multimer_mode=self.multimer_mode))
+        get_confidence_metrics(result, multimer_mode=self.multimer_mode, original_length=o_seq_l))
     logging.info('Output shape was %s',
                  tree.map_structure(lambda x: x.shape, result))
     return result

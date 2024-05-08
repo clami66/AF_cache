@@ -76,7 +76,9 @@ class Kalign:
 
       with open(input_fasta_path, 'w') as f:
         f.write(_to_a3m(sequences))
-
+        f.flush()
+      with open(input_fasta_path) as f:
+        logging.info("Input fasta to kalign %s", f.readlines())
       cmd = [
           self.binary_path,
           '-i', input_fasta_path,

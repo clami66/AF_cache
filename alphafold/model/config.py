@@ -241,6 +241,7 @@ CONFIG = ml_collections.ConfigDict({
                 'rigidgroups_gt_exists': [NUM_RES, None],
                 'rigidgroups_gt_frames': [NUM_RES, None, None],
                 'seq_length': [],
+                'original_seq_length': [],
                 'seq_mask': [NUM_RES],
                 'target_feat': [NUM_RES, None],
                 'template_aatype': [NUM_TEMPLATES, NUM_RES],
@@ -493,6 +494,34 @@ CONFIG = ml_collections.ConfigDict({
 
 
 CONFIG_MULTIMER = ml_collections.ConfigDict({
+    'eval': {
+            'feat': {
+                'aatype': [NUM_RES],
+                'asym_id': [NUM_RES],
+                'sym_id': [NUM_RES],
+                'entity_id': [NUM_RES],
+                'entity_mask': [NUM_RES],
+                'all_atom_mask': [NUM_RES, None],
+                'all_atom_positions': [NUM_RES, None, None],
+                'bert_mask': [NUM_MSA_SEQ, NUM_RES],
+                'msa_mask': [NUM_MSA_SEQ, NUM_RES],
+                'residue_index': [NUM_RES],
+                'seq_length': [],
+                'original_seq_length': [],
+                'num_alignments': [],
+                'assembly_num_chains': [],
+                'num_templates': [],
+                'seq_mask': [NUM_RES],
+                'template_aatype': [NUM_TEMPLATES, NUM_RES],
+                'template_all_atom_mask': [NUM_TEMPLATES, NUM_RES, None],
+                'template_all_atom_positions': [
+                    NUM_TEMPLATES, NUM_RES, None, None],
+                'msa': [NUM_MSA_SEQ, NUM_RES],
+                'cluster_bias_mask': [NUM_MSA_SEQ],
+                'deletion_matrix': [NUM_MSA_SEQ, NUM_RES],
+                'deletion_mean': [NUM_RES],
+            },
+        },
     'model': {
         'embeddings_and_evoformer': {
             'cross_chain_templates': False,

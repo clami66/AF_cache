@@ -17,8 +17,10 @@
 import collections
 import contextlib
 import copy
+import hashlib
 import dataclasses
 import json
+import pickle
 import os
 import tempfile
 from typing import Mapping, MutableMapping, Sequence
@@ -166,6 +168,30 @@ def pad_msa(np_example, min_num_seq):
         np_example['cluster_bias_mask'], ((0, min_num_seq - num_seq),))
   return np_example
 
+def make_fixed_size(protein, shape_schema, num_res, max_msa):
+  """Pad sequence lenghts to a fixed size."""
+  from alphafold.model.tf import shape_placeholders
+  NUM_RES = shape_placeholders.NUM_RES
+  NUM_MSA_SEQ = shape_placeholders.NUM_MSA_SEQ
+  pad_size_map = {
+      NUM_RES: num_res,
+      NUM_MSA_SEQ: max_msa,
+  }
+  protein["original_seq_length"] = protein["seq_length"]
+  for k, v in protein.items():
+    shape = list(v.shape)
+    schema = shape_schema[k]
+    assert len(shape) == len(schema), (
+        f'Rank mismatch between shape and shape schema for {k}: '
+        f'{shape} vs {schema}')
+    pad_size = [
+        pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)
+    ]
+    padding = [(0, p - np.shape(v)[i]) for i, p in enumerate(pad_size)]
+    if padding:
+      protein[k] = np.pad(
+          v, padding)
+  return protein
 
 class DataPipeline:
   """Runs the alignment tools and assembles the input features."""
@@ -176,7 +202,10 @@ class DataPipeline:
                uniprot_database_path: str,
                max_uniprot_hits: int = 50000,
                use_precomputed_msas: bool = False,
-               separate_homomer_msas: bool = False):
+               separate_homomer_msas: bool = False,
+               feat_config: dict = None,
+               pad_length: list = None,
+               pickle_cache: str = ""):
     """Initializes the data pipeline.
 
     Args:
@@ -195,6 +224,9 @@ class DataPipeline:
     self._max_uniprot_hits = max_uniprot_hits
     self.use_precomputed_msas = use_precomputed_msas
     self.separate_homomer_msas = separate_homomer_msas
+    self.feat_config = feat_config
+    self.pad_length = pad_length
+    self.pickle_cache = pickle_cache
 
   def _process_single_chain(
       self,
@@ -204,6 +236,19 @@ class DataPipeline:
       msa_output_dir: str,
       is_homomer_or_monomer: bool) -> pipeline.FeatureDict:
     """Runs the monomer pipeline on a single chain."""
+    
+    pickle_path = ""
+    # avoid re-processing single-chain features if they are there from a previous run
+    if self.pickle_cache:
+      #if not os.path.exists(self.pickle_cache):
+      #  os.makedirs(self.pickle_cache, exist_ok=True)
+      sequence_hash = hashlib.md5(sequence.encode()).hexdigest()
+      # if this path has been set but the pickle doesn't exist, it will be written later
+      pickle_path = os.path.join(self.pickle_cache, f"{sequence_hash}.pkl")
+      if os.path.exists(pickle_path):
+        logging.info("Reading cached features for sequence %s", sequence)
+        return pickle.load(open(pickle_path, "rb"))
+    
     chain_fasta_str = f'>chain_{chain_id}\n{sequence}\n'
     chain_msa_output_dir = os.path.join(msa_output_dir, chain_id)
     if not os.path.exists(chain_msa_output_dir):
@@ -214,13 +259,17 @@ class DataPipeline:
       chain_features = self._monomer_data_pipeline.process(
           input_fasta_path=chain_fasta_path,
           msa_output_dir=chain_msa_output_dir)
-
       # We only construct the pairing features if there are 2 or more unique
-      # sequences.
-      if not is_homomer_or_monomer:
+      # sequences. If monomer but the pickle cache is active, then still read 
+      # the uniprot features because it might be useful later
+      if not is_homomer_or_monomer or self.pickle_cache:
         all_seq_msa_features = self._all_seq_msa_features(chain_fasta_path,
                                                           chain_msa_output_dir)
         chain_features.update(all_seq_msa_features)
+      
+      if self.pickle_cache and not os.path.exists(pickle_path):
+        with open(pickle_path, 'wb') as f:
+          pickle.dump(chain_features, f, protocol=4)
     return chain_features
 
   def _all_seq_msa_features(self, input_fasta_path, msa_output_dir):
@@ -283,5 +332,7 @@ class DataPipeline:
 
     # Pad MSA to avoid zero-sized extra_msa.
     np_example = pad_msa(np_example, 512)
+    if self.pad_length and self.pad_length[0]:
+      np_example = make_fixed_size(np_example, self.feat_config, self.pad_length[0], self.pad_length[1])
 
     return np_example

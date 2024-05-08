@@ -33,7 +33,8 @@ class Hmmsearch(object):
                binary_path: str,
                hmmbuild_binary_path: str,
                database_path: str,
-               flags: Optional[Sequence[str]] = None):
+               flags: Optional[Sequence[str]] = None,
+               redundancy_reduce: int = 100):
     """Initializes the Python hmmsearch wrapper.
 
     Args:
@@ -49,6 +50,7 @@ class Hmmsearch(object):
     self.binary_path = binary_path
     self.hmmbuild_runner = hmmbuild.Hmmbuild(binary_path=hmmbuild_binary_path)
     self.database_path = database_path
+    self.redundancy_reduce = redundancy_reduce
     if flags is None:
       # Default hmmsearch run settings.
       flags = ['--F1', '0.1',
@@ -72,10 +74,13 @@ class Hmmsearch(object):
   def input_format(self) -> str:
     return 'sto'
 
-  def query(self, msa_sto: str) -> str:
+  def query(self, msa: str, actually_an_a3m: bool = False) -> str:
     """Queries the database using hmmsearch using a given stockholm msa."""
-    hmm = self.hmmbuild_runner.build_profile_from_sto(msa_sto,
+    if not actually_an_a3m:
+      hmm = self.hmmbuild_runner.build_profile_from_sto(msa,
                                                       model_construction='hand')
+    else:
+      hmm = self.hmmbuild_runner.build_profile_from_a3m(msa)
     return self.query_with_hmm(hmm)
 
   def query_with_hmm(self, hmm: str) -> str:
@@ -89,7 +94,7 @@ class Hmmsearch(object):
       cmd = [
           self.binary_path,
           '--noali',  # Don't include the alignment in stdout.
-          '--cpu', '8'
+          '--cpu', '2'
       ]
       # If adding flags, we have to do so before the output and input:
       if self.flags:
@@ -124,6 +129,43 @@ class Hmmsearch(object):
     """Gets parsed template hits from the raw string output by the tool."""
     a3m_string = parsers.convert_stockholm_to_a3m(output_string,
                                                   remove_first_row_gaps=False)
+    
+    if self.redundancy_reduce < 100:
+      # write a3m_string to file
+      with utils.tmpdir_manager() as tmp_dir:
+        a3m_out_path = os.path.join(tmp_dir, 'pdb_hits.a3m')
+        filtered_a3m_out_path = os.path.join(tmp_dir, 'pdb_hits_filtered.a3m')
+
+        with open(a3m_out_path, 'w') as f:
+          f.write(a3m_string)
+
+        # hhfilter a3m_string
+        cmd = [
+          "hhfilter",
+          '-i',
+          a3m_out_path,
+          '-o',
+          filtered_a3m_out_path,
+          '-id',
+          str(self.redundancy_reduce),
+          '-v',
+          '0',
+        ]
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with utils.timing(
+            f'hhfilter (-id {self.redundancy_reduce}) templates'):
+          stdout, stderr = process.communicate()
+          retcode = process.wait()
+
+        if retcode:
+          raise RuntimeError(
+              'hhfilter failed:\nstdout:\n%s\n\nstderr:\n%s\n' % (
+                  stdout.decode('utf-8'), stderr.decode('utf-8')))
+
+        with open(filtered_a3m_out_path) as f:
+          a3m_string = f.read()
+      # read filtered a3m_string
     template_hits = parsers.parse_hmmsearch_a3m(
         query_sequence=input_sequence,
         a3m_string=a3m_string,
