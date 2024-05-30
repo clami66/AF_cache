@@ -21,6 +21,7 @@ import hashlib
 import dataclasses
 import json
 import pickle
+import gzip
 import os
 import tempfile
 from typing import Mapping, MutableMapping, Sequence
@@ -236,7 +237,7 @@ class DataPipeline:
       msa_output_dir: str,
       is_homomer_or_monomer: bool) -> pipeline.FeatureDict:
     """Runs the monomer pipeline on a single chain."""
-    
+
     pickle_path = ""
     # avoid re-processing single-chain features if they are there from a previous run
     if self.pickle_cache:
@@ -245,10 +246,14 @@ class DataPipeline:
       sequence_hash = hashlib.md5(sequence.encode()).hexdigest()
       # if this path has been set but the pickle doesn't exist, it will be written later
       pickle_path = os.path.join(self.pickle_cache, f"{sequence_hash}.pkl")
+      gz_pickle_path = os.path.join(self.pickle_cache, f"{sequence_hash}.pkl.gz")
       if os.path.exists(pickle_path):
-        logging.info("Reading cached features for sequence %s", sequence)
+        logging.info("Reading cached features for sequence %s, md5sum: %s", sequence, sequence_hash)
         return pickle.load(open(pickle_path, "rb"))
-    
+      elif os.path.exists(gz_pickle_path):
+        logging.info("Reading (compressed) cached features for sequence %s, md5sum: %s", sequence, sequence_hash)
+        return pickle.load(gzip.open(gz_pickle_path, "rb"))
+
     chain_fasta_str = f'>chain_{chain_id}\n{sequence}\n'
     chain_msa_output_dir = os.path.join(msa_output_dir, chain_id)
     if not os.path.exists(chain_msa_output_dir):
@@ -268,7 +273,7 @@ class DataPipeline:
         chain_features.update(all_seq_msa_features)
       
       if self.pickle_cache and not os.path.exists(pickle_path):
-        with open(pickle_path, 'wb') as f:
+        with gzip.open(gz_pickle_path, 'wb') as f:
           pickle.dump(chain_features, f, protocol=4)
     return chain_features
 
