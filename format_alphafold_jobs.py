@@ -53,7 +53,7 @@ def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, f
     pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
     pad_flag = f"--pad_to_size {pad_to_size}" if pad_to_size else ""
     condaenv = "AF_cache" if pad_to_size else "af_server"
-    return f"python /proj/beyondfold/apps/alphafoldv2.3.1_cache/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
+    return f"python /proj/beyondfold/apps/alphafoldv2.3.1_pad/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
 
 
 def define_pairs(fasta_records, out_dir, splits, list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):

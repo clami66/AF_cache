@@ -36,7 +36,7 @@ def make_accession2id(db_path):
     header_files = glob.glob(f"{db_path}/*_h.tsv")
     ptax = re.compile("TaxID=([0-9]+)")
     prep = re.compile("RepID=[A-Z0-9]+[_]([A-Z0-9]+)")
-    
+
     for header_file in header_files:
         print(f"Looking for taxids in {header_file}")
         with open(header_file) as headers:
@@ -50,13 +50,13 @@ def make_accession2id(db_path):
                 if match_repid:
                     repid = match_repid.group(1)
                     seqid_to_repid_dic[accession] = repid
-    
+
     with open(seqid_to_taxid, 'wb') as f:
       pickle.dump(seqid_to_taxid_dic, f, protocol=4)
     with open(seqid_to_repid, 'wb') as f:
       pickle.dump(seqid_to_repid_dic, f, protocol=4)
 
-def convert_alignment(in_alignment, out_dir, taxid=True):
+def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortname=False):
     seqids = set()
     tolower = str.maketrans('', '', string.ascii_lowercase)
     print(f"Opening {in_alignment}")
@@ -66,7 +66,7 @@ def convert_alignment(in_alignment, out_dir, taxid=True):
     # always write first (target) sequence to file
     target_header = next(a3m_data)
     target_seq = next(a3m_data)
-    
+
     # prepare the directory structure as AF wants it
     target_id = target_header.strip().strip(">")
     print(f"Target ID: {target_id}")
@@ -80,22 +80,28 @@ def convert_alignment(in_alignment, out_dir, taxid=True):
             memid = None
             seqid = line.split()[0].strip(">") # gets accession ID
 
-            if seqid not in seqids: # avoids duplicates
+            if seqid not in seqids:
                 seqids.add(seqid)
             else:
                 continue
-            
+
             if seqid in seqid_to_id:
                 memid = seqid_to_id[seqid]
-            if taxid:
-                memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
-                
+                #print(seqid, memid)
+                if taxid:
+                    memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
+
             if memid:
-                seqid_alpha = re.sub(r"[^a-zA-Z0-9]", '', seqid)
-                pseudo_uniprot.write(f">tr|{seqid_alpha}|{seqid_alpha}_{memid}/1-{len(target_seq)}\n")
+                # UniRef100_A0A2I3H6P3 -> A0A2I3H6P3
+                if shortname and len(seqid) > 7:
+                    seqid = re.sub("UniRef100_", "", seqid)
+                    seqid = base64.urlsafe_b64encode(hashlib.md5(str(seqid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:7].lower()
+
+                seqid = re.sub(r"[^a-zA-Z0-9]", "", seqid)
+                pseudo_uniprot.write(f">tr|{seqid}|{seqid}_{memid}/1-{len(target_seq)}\n")
 
         elif memid:
-                pseudo_uniprot.write(line.translate(tolower))
+            pseudo_uniprot.write(line.translate(tolower))
 
     pseudo_uniprot.close()
 
@@ -107,7 +113,7 @@ def convert_alignment(in_alignment, out_dir, taxid=True):
 
     output_handle.close()
     input_handle.close()
-    
+
     # bfd symlink
     src = os.path.abspath(in_alignment)
     dst = f"{os.path.abspath(out_dir)}/{target_id}/msas/A/bfd_uniref_hits.a3m"
@@ -117,15 +123,12 @@ def convert_alignment(in_alignment, out_dir, taxid=True):
     os.symlink(src, dst)
 
 
-
 def main(args):
-
-    taxid = False if args.repid else True
-    seqid_to_id = get_accession2id(args.db_path, taxid=taxid)
     a3ms = glob.glob(f"{args.in_path}/*.a3m")
     print(f"Converting alignments: {a3ms}")
     with Pool(processes=int(args.n_cpu)) as pool:
-        pool.map(partial(convert_alignment, out_dir=args.out_dir, taxid=taxid), a3ms)
+        pool.map(partial(convert_alignment, out_dir=args.out_dir, taxid=taxid,
+                         duplicate=args.duplicate, shortname=args.shortname), a3ms)
 
 
 if __name__ == '__main__':
@@ -137,6 +140,9 @@ if __name__ == '__main__':
     parser.add_argument("--n_cpu", default=8, type=int)
     parser.add_argument("--taxid", action="store_true", default=True, help = "If tax IDs should be used in the pairing procedure")
     parser.add_argument("--repid", action="store_true", default=False, help = "If mnemonic species IDs should be used in the pairing procedure")
+    parser.add_argument("--duplicate", action="store_true", default=False, help = "If we should add duplicate species to the uniprot file")
+    parser.add_argument("--shortname", action="store_true", default=False, help = "To replace long names in the database with 7-char names - necessary for pairing")
     args = parser.parse_args()
-    
+    taxid = False if args.repid else True
+    seqid_to_id = get_accession2id(args.db_path, taxid=taxid)
     main(args)
