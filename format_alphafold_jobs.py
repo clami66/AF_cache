@@ -1,6 +1,6 @@
 import os
 import argparse
-from sys import argv
+from sys import argv, exit
 from math import inf
 from glob import glob
 from pathlib import Path
@@ -24,21 +24,41 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION='6.0'
 module load Anaconda/2021.05-nsc1
 """
 
-def get_file_list(file):
-    with open(file, "r") as f:
+
+def get_fasta_record(fasta_file):
+    try:
+        with open(fasta_file) as f:
+            record = next(SeqIO.parse(f, "fasta"))
+    except:
+        print(f"Missing fasta record: {fasta_file}")
+        return None
+    return record
+
+
+def get_records_from_pair_list(list_file, fasta_path):
+    with open(list_file, "r") as f:
 	    tmplist = f.readlines()
     pairlist = []
     for i in tmplist:
-        pairlist.append(i.strip("\n"))
+        p1, p2 = i.strip("\n").split("_")
+        fasta_p1 = Path(fasta_path, f"{p1}.fasta")
+        fasta_p2 = Path(fasta_path, f"{p2}.fasta")
+        
+        record_p1 = get_fasta_record(fasta_p1)
+        record_p2 = get_fasta_record(fasta_p2)
+        
+        if record_p1 and record_p2:
+            pairlist.append([(record_p1, p1), (record_p2, p2)])
     return pairlist
 
 
-def get_fasta_records(fasta_files: list):
+def get_records_from_dir(fasta_files: list):
     fasta_records = []
     for ff in fasta_files:
         fasta_path = Path(ff)
-        with open(fasta_path) as f:
-            record = next(SeqIO.parse(f, "fasta"))
+        record = get_fasta_record(fasta_path)
+        
+        if record:
             fasta_records.append((record, fasta_path.stem))
     return fasta_records
 
@@ -56,9 +76,11 @@ def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, f
     return f"python /proj/beyondfold/apps/alphafoldv2.3.1_pad/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
 
 
-def define_pairs(fasta_records, out_dir, splits, list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
+def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
 
-    if list or both_directions:
+    if pair_list:
+        all_pairs = pair_list
+    elif both_directions:
         all_pairs = product(fasta_records, repeat=2)
     elif include_homomers:
         all_pairs = combinations_with_replacement(fasta_records, 2)
@@ -66,26 +88,29 @@ def define_pairs(fasta_records, out_dir, splits, list, write_fastas=False, overw
         all_pairs = combinations(fasta_records, 2)
 
     pair_bins = {split:[] for split in splits}
-    for pair in all_pairs:
+    for count, pair in enumerate(all_pairs):
+        if not count % 1000:
+            print(count)
+
         pair_id = f"{pair[0][1]}_{pair[1][1]}"
         pair_records = (pair[0][0], pair[1][0])
-        if not list or pair_id in list:
-            af_output = glob(f"{out_dir}/{pair_id}/unrelaxed*pdb")
+        
+        af_output = glob(f"{out_dir}/{pair_id}/unrelaxed*pdb")
 
-            if not af_output or overwrite_output:
-                pair_fasta = Path(out_dir, pair_id, f"{pair_id}.fasta")
-                if args.write_fastas:
-                    pair_folder = Path(out_dir, pair_id)
-                    pair_folder.mkdir(parents=True, exist_ok=True)
+        if not af_output or overwrite_output:
+            pair_fasta = Path(out_dir, pair_id, f"{pair_id}.fasta")
+            if args.write_fastas:
+                pair_folder = Path(out_dir, pair_id)
+                pair_folder.mkdir(parents=True, exist_ok=True)
 
-                    with open(pair_fasta, "w") as pf:
-                        SeqIO.write(pair_records[0], pf, "fasta")
-                        SeqIO.write(pair_records[1], pf, "fasta")
+                with open(pair_fasta, "w") as pf:
+                    SeqIO.write(pair_records[0], pf, "fasta")
+                    SeqIO.write(pair_records[1], pf, "fasta")
 
-                pair_size = len(pair_records[0].seq) + len(pair_records[1].seq)
+            pair_size = len(pair_records[0].seq) + len(pair_records[1].seq)
 
-                pair_bin = splits[bisect(splits, pair_size)]
-                pair_bins[pair_bin].append((str(pair_fasta), pair_size))
+            pair_bin = splits[bisect(splits, pair_size)]
+            pair_bins[pair_bin].append((str(pair_fasta), pair_size))
     return pair_bins
 
 def main(args, af_args):
@@ -97,13 +122,15 @@ def main(args, af_args):
 
     out_dir = str(Path(args.out_dir).resolve())
 
-    fasta_records = get_fasta_records(glob(f"{args.in_path}/*.fasta"))
-
-    try:
-        pairlist = get_file_list(args.file_list)
-    except:
+    if args.file_list:
+        pairlist = get_records_from_pair_list(args.file_list, args.in_path)
+        fasta_records = []
+    else:
+        fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         pairlist = []
 
+    print(len(pairlist))
+    exit(0)
     binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
