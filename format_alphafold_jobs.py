@@ -129,8 +129,6 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         pairlist = []
 
-    print(len(pairlist))
-    exit(0)
     binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
@@ -169,7 +167,7 @@ if __name__ == '__main__':
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
     parser.add_argument("--flagfile", help = "Flagfile with parameters to AF", default=f"/proj/beyondfold/users/x_clami/mmseqs_benchmark/scripts/multimer_all_vs_all.flag")
     parser.add_argument("--pickle_dir", default="", help="Path to directory containing pickled features for all monomers in set")
-    parser.add_argument("--proj_id", default="berzelius-2023-328", help="SLURM project ID")
+    parser.add_argument("--proj_id", default="berzelius-xxxx-yyyy", help="SLURM project ID")
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[400, 800, 1000, 1200, 1400, 1600, 4500], help="Boundaries (sum of sequences length) to group multiple inference jobs")
