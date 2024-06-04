@@ -12,5 +12,5 @@ picklecache=$4
 
 mkdir -p $picklecache
 
-#python $AFPATH/mmseqs_2_uniprot_parallel.py $a3m_path $outdir $DBDIR --n_cpu 16 --shortname
+python $AFPATH/mmseqs_2_uniprot_parallel.py $a3m_path $outdir $DBDIR --n_cpu 16 --shortname
 ls $fastapath/*.fasta | parallel -j 16 python $AFPATH/parse_features.py --flagfile $FLAGFILE --output_dir $outdir --fasta_paths={} --pickle_cache $picklecache --alignments_only
