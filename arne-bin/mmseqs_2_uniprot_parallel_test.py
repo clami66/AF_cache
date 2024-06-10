@@ -36,7 +36,7 @@ def make_accession2id(db_path):
     header_files = glob.glob(f"{db_path}/*_h.tsv")
     ptax = re.compile("TaxID=([0-9]+)")
     prep = re.compile("RepID=[A-Z0-9]+[_]([A-Z0-9]+)")
-    
+
     for header_file in header_files:
         print(f"Looking for taxids in {header_file}")
         with open(header_file) as headers:
@@ -50,13 +50,13 @@ def make_accession2id(db_path):
                 if match_repid:
                     repid = match_repid.group(1)
                     seqid_to_repid_dic[accession] = repid
-    
+
     with open(seqid_to_taxid, 'wb') as f:
       pickle.dump(seqid_to_taxid_dic, f, protocol=4)
     with open(seqid_to_repid, 'wb') as f:
       pickle.dump(seqid_to_repid_dic, f, protocol=4)
 
-def convert_alignment(in_alignment, out_dir, taxid,duplicate=False,shortname=False):
+def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortname=False):
     seqids = set()
     tolower = str.maketrans('', '', string.ascii_lowercase)
     print(f"Opening {in_alignment}")
@@ -66,7 +66,7 @@ def convert_alignment(in_alignment, out_dir, taxid,duplicate=False,shortname=Fal
     # always write first (target) sequence to file
     target_header = next(a3m_data)
     target_seq = next(a3m_data)
-    
+
     # prepare the directory structure as AF wants it
     target_id = target_header.strip().strip(">")
     print(f"Target ID: {target_id}")

@@ -75,33 +75,88 @@ def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortn
     pseudo_uniprot.write(target_header)
     pseudo_uniprot.write(target_seq)
     print(f"Starting conversion: {target_id}")
-    for line in a3m_data:
-        if line.startswith(">"):
-            memid = None
-            seqid = line.split()[0].strip(">") # gets accession ID
-
-            if seqid not in seqids:
-                seqids.add(seqid)
-            else:
-                continue
-
-            if seqid in seqid_to_id:
-                memid = seqid_to_id[seqid]
-                #print(seqid, memid)
+    if (duplicate):     
+        for line in a3m_data:
+            if line.startswith(">"):
+                if memid:
+                    for i in range(len(memid)):
+                        pseudo_uniprot.write(uniprotid[i])
+                        pseudo_uniprot.write(sequence)   
+                memid = []
+                seqid = line.split()[0].strip(">") # gets accession ID
+                tempid=[]
+                #print ("Testing1 seqid",seqid,len(seqid_to_id))
+                if  (longseqid not in seqids) and  (shortseqid not in seqids) and (seqid not in seqids): # avoids duplicates
+                    #print ("Adding seqid",seqid)
+                    seqids.add(seqid)
+                else:
+                    continue
+                #print ("Testing2 seqid",seqid)                  
+                if seqid in seqid_to_id:
+                    try:
+                        memid = seqid_to_id[seqid].split(",")
+                    except:
+                        memid.append(str(seqid_to_id[seqid]))
+                    #memid = seqid_to_id[seqid]
+                    tempid=memid.copy()
+                    #print ("updating seqid1",seqid,memid)
                 if taxid:
-                    memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
+                    if (memid):
+                        j=0
+                        for i in memid:
+                            memid[j] = base64.urlsafe_b64encode(hashlib.md5(str(i).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
+                            j+=1                    
+                    else:
+                        memid=["NOSPECIEFOUND"]      
+                        tempid=["NOSPECIEFOUND"]      
+                if memid:
+                    uniprotid=[]
+                    for i in range(len(memid)):
+                        m=memid[i]
+                        t=tempid[i]   
+                        seqid_alpha=re.sub(r"[^a-zA-Z0-9]", '', seqid)+str(i)
+                        if shortname:
+                            seqid_alpha=base64.urlsafe_b64encode(hashlib.md5(str(seqid_alpha).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:7].lower()
+                        #pseudo_uniprot.write(f">tr|{seqid_alpha}|{seqid_alpha}_{memid}/1-{len(target_seq)} Seq:{seqid} Temp:{tempid} mem:{memid}\n")
+                        #pseudo_uniprot.write(f">tr|{seqid_alpha}|{seqid_alpha}_{memid}/1-{len(target_seq)} Memid:{tempid}\n")
+                        uniprotid.append(f">tr|{seqid_alpha}|{seqid_alpha}_{m}/1-{len(target_seq)} TaxID:{t} Seqid:{seqid}\n")
+                sequence=''
+            elif memid:
+                #pseudo_uniprot.write(line.translate(tolower))
+                sequence+=line.translate(tolower)
+        if memid:
+            for i in range(len(memid)):
+                pseudo_uniprot.write(uniprotid[i])
+                pseudo_uniprot.write(sequence)    
+    else:
+        for line in a3m_data:
+            if line.startswith(">"):
+                memid = None
+                seqid = line.split()[0].strip(">") # gets accession ID
 
-            if memid:
-                # UniRef100_A0A2I3H6P3 -> A0A2I3H6P3
-                if shortname and len(seqid) > 7:
-                    seqid = re.sub("UniRef100_", "", seqid)
-                    seqid = base64.urlsafe_b64encode(hashlib.md5(str(seqid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:7].lower()
+                if seqid not in seqids:
+                    seqids.add(seqid)
+                else:
+                    continue
 
-                seqid = re.sub(r"[^a-zA-Z0-9]", "", seqid)
-                pseudo_uniprot.write(f">tr|{seqid}|{seqid}_{memid}/1-{len(target_seq)}\n")
+                if seqid in seqid_to_id:
+                    memid = seqid_to_id[seqid]
+                    #print(seqid, memid)
+                    if taxid:
+                        memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
 
-        elif memid:
-            pseudo_uniprot.write(line.translate(tolower))
+                    
+                if memid:
+                    # UniRef100_A0A2I3H6P3 -> A0A2I3H6P3
+                    if shortname and len(seqid) > 7:
+                        seqid = re.sub("UniRef100_", "", seqid)
+                        seqid = base64.urlsafe_b64encode(hashlib.md5(str(seqid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:7].lower()
+
+                    seqid = re.sub(r"[^a-zA-Z0-9]", "", seqid)
+                    pseudo_uniprot.write(f">tr|{seqid}|{seqid}_{memid}/1-{len(target_seq)}\n")
+
+            elif memid:
+                pseudo_uniprot.write(line.translate(tolower))
 
     pseudo_uniprot.close()
 
