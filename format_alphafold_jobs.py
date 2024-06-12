@@ -129,7 +129,26 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         pairlist = []
 
-    binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
+    print(f'Generating job files for {args.pipeline} pipeline ...')
+    
+    if args.pipeline=='monomer':
+        binned_pairs = {split:[] for split in splits}
+        for record in fasta_records:
+            fasta = Path(out_dir, record[1], f"{record[1]}.fasta")
+            seq_len = len(record[0])
+            pair_bin = splits[bisect(splits, seq_len)]
+            binned_pairs[pair_bin].append((str(fasta), seq_len))
+
+            # Write fasta to file
+            if args.write_fastas:
+                pair_folder = Path(out_dir, record[1])
+                pair_folder.mkdir(parents=True, exist_ok=True)
+                with open(fasta, "w") as pf:
+                    SeqIO.write(record[0], pf, "fasta")
+
+    elif args.pipeline=='multimer':
+        binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
+
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
     estimated_gpu_runtime = 0
@@ -162,6 +181,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
     parser.add_argument("in_path", help = "Path to the directory containing the fasta files")
     parser.add_argument("--file_list", help = "Path to file containing a list of files to run (if not desire all against all)",default="")
+    parser.add_argument("--pipeline", choices=['monomer', 'multimer'], help="Choose pipeline (monomer or multimer)")
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
     parser.add_argument("--both_directions", action="store_true", default=False, help="Run AB as well as BA")
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
