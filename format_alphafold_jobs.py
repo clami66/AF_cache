@@ -151,7 +151,7 @@ def main(args, af_args):
                 with open(command_file, "w") as command:
                     command.write(get_slurm_profile(args.proj_id, max_len, str(log_file)))
                     command.write("\n")
-                    command.write("conda activate -p /proj/beyondfold/apps/.conda/envs/af_server\n")
+                    command.write("conda activate /proj/beyondfold/apps/.conda/envs/af_server\n")
                     command.write(format_af_command([target[0] for target in target_chunk], out_dir, pickle_dir=args.pickle_dir, pad_to_size=pad_to_size, flagfile=args.flagfile, other_args=af_args))
                     command.write("\n")
 
