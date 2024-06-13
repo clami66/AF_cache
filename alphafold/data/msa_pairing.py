@@ -19,6 +19,7 @@ import functools
 import string
 from typing import Any, Dict, Iterable, List, Sequence
 
+from absl import logging
 from alphafold.common import residue_constants
 from alphafold.data import pipeline
 import numpy as np
@@ -72,7 +73,7 @@ def create_paired_features(
     paired_chains_to_paired_row_indices = pair_sequences(chains)
     paired_rows = reorder_paired_rows(
         paired_chains_to_paired_row_indices)
-
+    logging.info("Number of paired sequences in MSA: %d", len(paired_rows))
     for chain_num, chain in enumerate(chains):
       new_chain = {k: v for k, v in chain.items() if '_all_seq' not in k}
       for feature_name in chain_keys:
@@ -180,7 +181,7 @@ def pair_sequences(examples: List[pipeline.FeatureDict]
   """Returns indices for paired MSA sequences across chains."""
 
   num_examples = len(examples)
-
+  print(num_examples)
   all_chain_species_dict = []
   common_species = set()
   for chain_features in examples:

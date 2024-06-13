@@ -56,7 +56,7 @@ def make_accession2id(db_path):
     with open(seqid_to_repid, 'wb') as f:
       pickle.dump(seqid_to_repid_dic, f, protocol=4)
 
-def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortname=False):
+def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortname=False, custom_taxids=None):
     seqids = set()
     tolower = str.maketrans('', '', string.ascii_lowercase)
     print(f"Opening {in_alignment}")
@@ -66,6 +66,16 @@ def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortn
     # always write first (target) sequence to file
     target_header = next(a3m_data)
     target_seq = next(a3m_data)
+
+    custom_taxid_dic = {}
+    if custom_taxids is not None:
+        with open(custom_taxids, "r") as f:
+            for line in f:
+                split_line = line.strip().split(" ")
+                try:
+                    custom_taxid_dic[int(split_line[0])] = int(split_line[1])
+                except: # if the conversion is between Mnemonic IDs (e.g. 'HERPS HUMAN')
+                    custom_taxid_dic[split_line[0]] = split_line[1]
 
     # prepare the directory structure as AF wants it
     target_id = target_header.strip().strip(">")
@@ -87,7 +97,9 @@ def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortn
 
             if seqid in seqid_to_id:
                 memid = seqid_to_id[seqid]
-                #print(seqid, memid)
+                print(memid)
+                memid = custom_taxid_dic[memid] if memid in custom_taxid_dic else memid
+                print(" ", memid)
                 if taxid:
                     memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
 
@@ -128,7 +140,7 @@ def main(args):
     print(f"Converting alignments: {a3ms}")
     with Pool(processes=int(args.n_cpu)) as pool:
         pool.map(partial(convert_alignment, out_dir=args.out_dir, taxid=taxid,
-                         duplicate=args.duplicate, shortname=args.shortname), a3ms)
+                         duplicate=args.duplicate, shortname=args.shortname, custom_taxids=args.custom_taxids), a3ms)
 
 
 if __name__ == '__main__':
@@ -142,6 +154,7 @@ if __name__ == '__main__':
     parser.add_argument("--repid", action="store_true", default=False, help = "If mnemonic species IDs should be used in the pairing procedure")
     parser.add_argument("--duplicate", action="store_true", default=False, help = "If we should add duplicate species to the uniprot file")
     parser.add_argument("--shortname", action="store_true", default=False, help = "To replace long names in the database with 7-char names - necessary for pairing")
+    parser.add_argument("--custom_taxids", default=None, type=str, help = "Space-separated file of taxIDs or mnemoic IDs to replace in the outputs (e.g. '12345 6789' to convert taxID 12345 to 6789), for example in case to replace virus taxIDs with their respective host taxIDs")
     args = parser.parse_args()
     taxid = False if args.repid else True
     seqid_to_id = get_accession2id(args.db_path, taxid=taxid)
