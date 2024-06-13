@@ -324,7 +324,8 @@ class DataPipeline:
           description=fasta_chain.description,
           msa_output_dir=msa_output_dir,
           is_homomer_or_monomer=is_homomer_or_monomer)
-
+      if "msa_species_identifiers_all_seq" in chain_features:
+        logging.info("Number of identifiers in chain %s: %d", chain_id, len([n for n in chain_features["msa_species_identifiers_all_seq"] if n]))
       chain_features = convert_monomer_features(chain_features,
                                                 chain_id=chain_id)
       all_chain_features[chain_id] = chain_features
