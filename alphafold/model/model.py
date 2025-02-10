@@ -183,10 +183,13 @@ class RunModel:
     # all outputs are blocked on.
     if "original_seq_length" in feat:
       o_seq_l = feat["original_seq_length"]
+      length_slice = np.s_[:o_seq_l]
     else:
       o_seq_l = None
+      length_slice = np.s_[:]
 
     jax.tree_map(lambda x: x.block_until_ready(), result)
+    result["distogram"]["logits"] = result["distogram"]["logits"][length_slice, length_slice]
     result.update(
         get_confidence_metrics(result, multimer_mode=self.multimer_mode, original_length=o_seq_l))
     logging.info('Output shape was %s',
