@@ -235,8 +235,11 @@ def main(argv):
   monomer_data_pipeline = pipeline.DataPipeline(
       jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
       hhblits_binary_path=FLAGS.hhblits_binary_path,
+      mmseqs2_binary_path=None,
       uniref90_database_path=FLAGS.uniref90_database_path,
       mgnify_database_path=FLAGS.mgnify_database_path,
+      mmseqs2_uniref_database_path=None,
+      mmseqs2_env_database_path=None,
       bfd_database_path=FLAGS.bfd_database_path,
       uniref30_database_path=FLAGS.uniref30_database_path,
       small_bfd_database_path=FLAGS.small_bfd_database_path,

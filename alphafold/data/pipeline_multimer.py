@@ -201,6 +201,7 @@ class DataPipeline:
                monomer_data_pipeline: pipeline.DataPipeline,
                jackhmmer_binary_path: str,
                uniprot_database_path: str,
+               use_mmseqs2_align: bool = False,
                max_uniprot_hits: int = 50000,
                use_precomputed_msas: bool = False,
                separate_homomer_msas: bool = False,
@@ -227,6 +228,7 @@ class DataPipeline:
     self.separate_homomer_msas = separate_homomer_msas
     self.feat_config = feat_config
     self.pad_length = pad_length
+    self.use_mmseqs2_align = use_mmseqs2_align
     self.pickle_cache = pickle_cache
 
   def _process_single_chain(
@@ -271,7 +273,7 @@ class DataPipeline:
         all_seq_msa_features = self._all_seq_msa_features(chain_fasta_path,
                                                           chain_msa_output_dir)
         chain_features.update(all_seq_msa_features)
-      
+
       if self.pickle_cache and not os.path.exists(pickle_path):
         with gzip.open(gz_pickle_path, 'wb') as f:
           pickle.dump(chain_features, f, protocol=4)
@@ -279,12 +281,20 @@ class DataPipeline:
 
   def _all_seq_msa_features(self, input_fasta_path, msa_output_dir):
     """Get MSA features for unclustered uniprot, for pairing."""
-    out_path = os.path.join(msa_output_dir, 'uniprot_hits.sto')
-    result = pipeline.run_msa_tool(
-        self._uniprot_msa_runner, input_fasta_path, out_path, 'sto',
-        self.use_precomputed_msas)
-    msa = parsers.parse_stockholm(result['sto'])
-    msa = msa.truncate(max_seqs=self._max_uniprot_hits)
+    if not self.use_mmseqs2_align:
+      out_path = os.path.join(msa_output_dir, 'uniprot_hits.sto')
+      result = pipeline.run_msa_tool(
+          self._uniprot_msa_runner, input_fasta_path, out_path, 'sto',
+          self.use_precomputed_msas)
+      msa = parsers.parse_stockholm(result['sto'])
+      msa = msa.truncate(max_seqs=self._max_uniprot_hits)
+    else:
+      # file should be already there from the monomer pipeline
+      out_path = os.path.join(msa_output_dir, 'mmseqs2_hits.a3m')
+      result = pipeline.run_msa_tool(
+          None, None, out_path, 'a3m',
+          True)
+      msa = parser.parse_a3m(result['a3m'])
     all_seq_features = pipeline.make_msa_features([msa])
     valid_feats = msa_pairing.MSA_FEATURES + (
         'msa_species_identifiers',

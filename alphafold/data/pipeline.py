@@ -26,9 +26,9 @@ from alphafold.data.tools import hhblits
 from alphafold.data.tools import hhsearch
 from alphafold.data.tools import hmmsearch
 from alphafold.data.tools import jackhmmer
+from alphafold.data.tools import mmseqs2
 import numpy as np
 
-# Internal import (7716).
 
 FeatureDict = MutableMapping[str, np.ndarray]
 TemplateSearcher = Union[hhsearch.HHSearch, hmmsearch.Hmmsearch]
@@ -91,10 +91,12 @@ def run_msa_tool(msa_runner, input_fasta_path: str, msa_out_path: str,
                  ) -> Mapping[str, Any]:
   """Runs an MSA tool, checking if output already exists first."""
   if not use_precomputed_msas or not os.path.exists(msa_out_path):
+    logging.warning(f"{msa_out_path} does not exist")
     if max_sto_sequences is not None:
       result = msa_runner.query(input_fasta_path, max_sto_sequences)[0]  # pytype: disable=wrong-arg-count
     else:
       result = msa_runner.query(input_fasta_path)[0]
+      print(result)
     with open(msa_out_path, 'w') as f:
       f.write(result[msa_format])
   else:
@@ -118,9 +120,12 @@ class DataPipeline:
   def __init__(self,
                jackhmmer_binary_path: str,
                hhblits_binary_path: str,
+               mmseqs2_binary_path: Optional [str],
                uniref90_database_path: str,
                mgnify_database_path: str,
                bfd_database_path: Optional[str],
+               mmseqs2_uniref_database_path: Optional[str],
+               mmseqs2_env_database_path: Optional[str],
                uniref30_database_path: Optional[str],
                small_bfd_database_path: Optional[str],
                template_searcher: TemplateSearcher,
@@ -132,23 +137,33 @@ class DataPipeline:
                use_precomputed_msas: bool = False,
                alignments_only: bool = False,
                no_mgnify: bool = False,
-               no_uniref: bool = False):
+               no_uniref: bool = False,):
     """Initializes the data pipeline."""
     self._use_small_bfd = use_small_bfd
-    self.jackhmmer_uniref90_runner = jackhmmer.Jackhmmer(
-        binary_path=jackhmmer_binary_path,
-        database_path=uniref90_database_path)
-    if use_small_bfd:
-      self.jackhmmer_small_bfd_runner = jackhmmer.Jackhmmer(
-          binary_path=jackhmmer_binary_path,
-          database_path=small_bfd_database_path)
+
+    if mmseqs2_binary_path:
+      self.mmseqs2_runner = mmseqs2.MMseqs2(
+          binary_path=mmseqs2_binary_path,
+          uniref_db=mmseqs2_uniref_database_path,
+          metagenomic_db=mmseqs2_env_database_path,
+          gpu = ("gpu" in mmseqs2_uniref_database_path),
+          )
     else:
-      self.hhblits_bfd_uniref_runner = hhblits.HHBlits(
-          binary_path=hhblits_binary_path,
-          databases=[bfd_database_path, uniref30_database_path])
-    self.jackhmmer_mgnify_runner = jackhmmer.Jackhmmer(
-        binary_path=jackhmmer_binary_path,
-        database_path=mgnify_database_path)
+      self.mmseqs2_runner = None
+      self.jackhmmer_uniref90_runner = jackhmmer.Jackhmmer(
+          binary_path=jackhmmer_binary_path,
+          database_path=uniref90_database_path)
+      if use_small_bfd:
+        self.jackhmmer_small_bfd_runner = jackhmmer.Jackhmmer(
+            binary_path=jackhmmer_binary_path,
+            database_path=small_bfd_database_path)
+      else:
+        self.hhblits_bfd_uniref_runner = hhblits.HHBlits(
+            binary_path=hhblits_binary_path,
+            databases=[bfd_database_path, uniref30_database_path])
+      self.jackhmmer_mgnify_runner = jackhmmer.Jackhmmer(
+          binary_path=jackhmmer_binary_path,
+          database_path=mgnify_database_path)
     self.template_searcher = template_searcher
     self.template_featurizer = template_featurizer
     self.mgnify_max_hits = mgnify_max_hits
@@ -174,55 +189,66 @@ class DataPipeline:
 
     uniref90_msa = None
     mgnify_msa = None
+    mmseqs2_msa = None
 
-    # UNIREF90
-    if not self.no_uniref:
-      uniref90_out_path = os.path.join(msa_output_dir, 'uniref90_hits.sto')
-      jackhmmer_uniref90_result = run_msa_tool(
-          msa_runner=self.jackhmmer_uniref90_runner,
-          input_fasta_path=input_fasta_path,
-          msa_out_path=uniref90_out_path,
-          msa_format='sto',
-          use_precomputed_msas=self.use_precomputed_msas,
-          max_sto_sequences=self.uniref_max_hits)
-      uniref90_msa = parsers.parse_stockholm(jackhmmer_uniref90_result['sto'])
-    
-    # MGNIFY
-    if not self.no_mgnify:
-      mgnify_out_path = os.path.join(msa_output_dir, 'mgnify_hits.sto')
-      jackhmmer_mgnify_result = run_msa_tool(
-          msa_runner=self.jackhmmer_mgnify_runner,
-          input_fasta_path=input_fasta_path,
-          msa_out_path=mgnify_out_path,
-          msa_format='sto',
-          use_precomputed_msas=self.use_precomputed_msas,
-          max_sto_sequences=self.mgnify_max_hits)
-      mgnify_msa = parsers.parse_stockholm(jackhmmer_mgnify_result['sto'])
+    if self.mmseqs2_runner:
+      mmseqs2_out_path = os.path.join(msa_output_dir, 'mmseqs2_hits.a3m')
+      mmseqs2_result = run_msa_tool(
+        msa_runner=self.mmseqs2_runner,
+        input_fasta_path=input_fasta_path,
+        msa_out_path=mmseqs2_out_path,
+        msa_format='a3m',
+        use_precomputed_msas=self.use_precomputed_msas,)
+      mmseqs2_msa = parsers.parse_a3m(mmseqs2_result['a3m'])
+    else:
+      if not self.no_uniref:
+        uniref90_out_path = os.path.join(msa_output_dir, 'uniref90_hits.sto')
+        jackhmmer_uniref90_result = run_msa_tool(
+            msa_runner=self.jackhmmer_uniref90_runner,
+            input_fasta_path=input_fasta_path,
+            msa_out_path=uniref90_out_path,
+            msa_format='sto',
+            use_precomputed_msas=self.use_precomputed_msas,
+            max_sto_sequences=self.uniref_max_hits)
+        uniref90_msa = parsers.parse_stockholm(jackhmmer_uniref90_result['sto'])
+
+      if not self.no_mgnify:
+        mgnify_out_path = os.path.join(msa_output_dir, 'mgnify_hits.sto')
+        jackhmmer_mgnify_result = run_msa_tool(
+            msa_runner=self.jackhmmer_mgnify_runner,
+            input_fasta_path=input_fasta_path,
+            msa_out_path=mgnify_out_path,
+            msa_format='sto',
+            use_precomputed_msas=self.use_precomputed_msas,
+            max_sto_sequences=self.mgnify_max_hits)
+        mgnify_msa = parsers.parse_stockholm(jackhmmer_mgnify_result['sto'])
 
     # BFD
-    if self._use_small_bfd:
-      bfd_out_path = os.path.join(msa_output_dir, 'small_bfd_hits.sto')
-      jackhmmer_small_bfd_result = run_msa_tool(
-          msa_runner=self.jackhmmer_small_bfd_runner,
-          input_fasta_path=input_fasta_path,
-          msa_out_path=bfd_out_path,
-          msa_format='sto',
-          use_precomputed_msas=self.use_precomputed_msas,
-          max_sto_sequences=self.bfd_max_hits)
-      bfd_msa = parsers.parse_stockholm(jackhmmer_small_bfd_result['sto'])
-    else:
-      bfd_out_path = os.path.join(msa_output_dir, 'bfd_uniref_hits.a3m')
-      hhblits_bfd_uniref_result = run_msa_tool(
-          msa_runner=self.hhblits_bfd_uniref_runner,
-          input_fasta_path=input_fasta_path,
-          msa_out_path=bfd_out_path,
-          msa_format='a3m',
-          use_precomputed_msas=self.use_precomputed_msas,
-          max_sto_sequences=self.bfd_max_hits)
-      bfd_msa = parsers.parse_a3m(hhblits_bfd_uniref_result['a3m'])    
+      if self._use_small_bfd:
+        bfd_out_path = os.path.join(msa_output_dir, 'small_bfd_hits.sto')
+        jackhmmer_small_bfd_result = run_msa_tool(
+            msa_runner=self.jackhmmer_small_bfd_runner,
+            input_fasta_path=input_fasta_path,
+            msa_out_path=bfd_out_path,
+            msa_format='sto',
+            use_precomputed_msas=self.use_precomputed_msas,
+            max_sto_sequences=self.bfd_max_hits)
+        bfd_msa = parsers.parse_stockholm(jackhmmer_small_bfd_result['sto'])
+      else:
+        bfd_out_path = os.path.join(msa_output_dir, 'bfd_uniref_hits.a3m')
+        hhblits_bfd_uniref_result = run_msa_tool(
+            msa_runner=self.hhblits_bfd_uniref_runner,
+            input_fasta_path=input_fasta_path,
+            msa_out_path=bfd_out_path,
+            msa_format='a3m',
+            use_precomputed_msas=self.use_precomputed_msas,
+            max_sto_sequences=self.bfd_max_hits)
+        bfd_msa = parsers.parse_a3m(hhblits_bfd_uniref_result['a3m'])
     
     # TEMPLATES
-    if not self.no_uniref:
+    if mmseqs2_msa:
+      msa_for_templates = mmseqs2_result['a3m']
+    elif not self.no_uniref:
       msa_for_templates = jackhmmer_uniref90_result['sto']
     else:
       if self._use_small_bfd:
@@ -267,16 +293,20 @@ class DataPipeline:
         description=input_description,
         num_res=num_res)
 
-    msas = [bfd_msa]
-    if not self.no_uniref:
-      msas = [uniref90_msa] + msas
-      logging.info('Uniref90 MSA size: %d sequences.', len(uniref90_msa))
-    if not self.no_mgnify:
-      msas = msas + [mgnify_msa]
-      logging.info('MGnify MSA size: %d sequences.', len(mgnify_msa))
+    if mmseqs2_msa:
+      msas = [mmseqs2_msa]
+      logging.info('MMseqs2 MSA size: %d sequences.', len(mmseqs2_msa))
+    else:
+      msas = [bfd_msa]
+      logging.info('BFD MSA size: %d sequences.', len(bfd_msa))
+      if not self.no_uniref:
+        msas = [uniref90_msa] + msas
+        logging.info('Uniref90 MSA size: %d sequences.', len(uniref90_msa))
+      if not self.no_mgnify:
+        msas = msas + [mgnify_msa]
+        logging.info('MGnify MSA size: %d sequences.', len(mgnify_msa))
     msa_features = make_msa_features(tuple(msas))
-    
-    logging.info('BFD MSA size: %d sequences.', len(bfd_msa))
+
     logging.info('Final (deduplicated) MSA size: %d sequences.',
                  msa_features['num_alignments'][0])
     logging.info('Total number of templates (NB: this can include bad '
