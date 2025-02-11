@@ -87,7 +87,7 @@ def parse_fasta(fasta_string: str) -> Tuple[Sequence[str], Sequence[str]]:
       descriptions.append(line[1:])  # Remove the '>' at the beginning.
       sequences.append('')
       continue
-    elif not line:
+    elif not line or line.startswith("#"): # mmseqs a3ms might have a header line
       continue  # Skip blank lines.
     sequences[index] += line
 

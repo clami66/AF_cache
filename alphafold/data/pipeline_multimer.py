@@ -294,8 +294,8 @@ class DataPipeline:
       result = pipeline.run_msa_tool(
           None, None, out_path, 'a3m',
           True)
-      msa = parser.parse_a3m(result['a3m'])
-    all_seq_features = pipeline.make_msa_features([msa])
+      msa = parsers.parse_a3m(result['a3m'])
+    all_seq_features = pipeline.make_msa_features([msa], self.use_mmseqs2_align)
     valid_feats = msa_pairing.MSA_FEATURES + (
         'msa_species_identifiers',
     )

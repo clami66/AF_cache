@@ -51,7 +51,7 @@ def make_sequence_features(
   return features
 
 
-def make_msa_features(msas: Sequence[parsers.Msa]) -> FeatureDict:
+def make_msa_features(msas: Sequence[parsers.Msa], is_mmseqs: bool = False) -> FeatureDict:
   """Constructs a feature dict of MSA features."""
   if not msas:
     raise ValueError('At least one MSA must be provided.')
@@ -71,7 +71,7 @@ def make_msa_features(msas: Sequence[parsers.Msa]) -> FeatureDict:
           [residue_constants.HHBLITS_AA_TO_ID[res] for res in sequence])
       deletion_matrix.append(msa.deletion_matrix[sequence_index])
       identifiers = msa_identifiers.get_identifiers(
-          msa.descriptions[sequence_index])
+          msa.descriptions[sequence_index], is_mmseqs)
       species_ids.append(identifiers.species_id.encode('utf-8'))
 
   num_res = len(msas[0].sequences[0])
@@ -96,7 +96,6 @@ def run_msa_tool(msa_runner, input_fasta_path: str, msa_out_path: str,
       result = msa_runner.query(input_fasta_path, max_sto_sequences)[0]  # pytype: disable=wrong-arg-count
     else:
       result = msa_runner.query(input_fasta_path)[0]
-      print(result)
     with open(msa_out_path, 'w') as f:
       f.write(result[msa_format])
   else:
@@ -264,7 +263,7 @@ class DataPipeline:
         msa_output_dir, f'pdb_hits.{self.template_searcher.output_format}')
     if not self.use_precomputed_msas or not os.path.isfile(pdb_hits_out_path):
       if self.template_searcher.input_format == 'sto':
-        pdb_templates_result = self.template_searcher.query(msa_for_templates, actually_an_a3m=self.no_uniref)
+        pdb_templates_result = self.template_searcher.query(msa_for_templates, actually_an_a3m=(self.mmseqs2_runner or self.no_uniref))
       elif self.template_searcher.input_format == 'a3m':
         if not self.no_uniref:
           uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)
@@ -305,7 +304,7 @@ class DataPipeline:
       if not self.no_mgnify:
         msas = msas + [mgnify_msa]
         logging.info('MGnify MSA size: %d sequences.', len(mgnify_msa))
-    msa_features = make_msa_features(tuple(msas))
+    msa_features = make_msa_features(tuple(msas), is_mmseqs=(self.mmseqs2_runner is not None))
 
     logging.info('Final (deduplicated) MSA size: %d sequences.',
                  msa_features['num_alignments'][0])

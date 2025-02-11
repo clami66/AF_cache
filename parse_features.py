@@ -65,6 +65,12 @@ flags.DEFINE_string('hmmbuild_binary_path', shutil.which('hmmbuild'),
                     'Path to the hmmbuild executable.')
 flags.DEFINE_string('kalign_binary_path', shutil.which('kalign'),
                     'Path to the Kalign executable.')
+flags.DEFINE_string('mmseqs2_binary_path', None,
+                    'Path to the MMseqs2 executable (GPU version).')
+flags.DEFINE_string('mmseqs2_uniref_database_path', None, 'Path to the Uniref30 '
+                    'database for use by MMseqs2.')
+flags.DEFINE_string('mmseqs2_env_database_path', None, 'Path to the environmental '
+                    'database for use by MMseqs2.')
 flags.DEFINE_string('uniref90_database_path', None, 'Path to the Uniref90 '
                     'database for use by JackHMMER.')
 flags.DEFINE_string('mgnify_database_path', None, 'Path to the MGnify '
@@ -235,11 +241,11 @@ def main(argv):
   monomer_data_pipeline = pipeline.DataPipeline(
       jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
       hhblits_binary_path=FLAGS.hhblits_binary_path,
-      mmseqs2_binary_path=None,
+      mmseqs2_binary_path=FLAGS.mmseqs2_binary_path,
       uniref90_database_path=FLAGS.uniref90_database_path,
       mgnify_database_path=FLAGS.mgnify_database_path,
-      mmseqs2_uniref_database_path=None,
-      mmseqs2_env_database_path=None,
+      mmseqs2_uniref_database_path=FLAGS.mmseqs2_uniref_database_path,
+      mmseqs2_env_database_path=FLAGS.mmseqs2_env_database_path,
       bfd_database_path=FLAGS.bfd_database_path,
       uniref30_database_path=FLAGS.uniref30_database_path,
       small_bfd_database_path=FLAGS.small_bfd_database_path,
@@ -260,6 +266,7 @@ def main(argv):
         monomer_data_pipeline=monomer_data_pipeline,
         jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
         uniprot_database_path=FLAGS.uniprot_database_path,
+        use_mmseqs2_align=(FLAGS.mmseqs2_binary_path is not None),
         use_precomputed_msas=FLAGS.use_precomputed_msas,
         max_uniprot_hits=FLAGS.uniprot_max_hits,
         separate_homomer_msas=FLAGS.separate_homomer_msas,
