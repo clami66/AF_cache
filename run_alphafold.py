@@ -214,10 +214,10 @@ def predict_structure(
     fasta_name: str,
     output_dir_base: str,
     data_pipeline: Union[pipeline.DataPipeline, pipeline_multimer.DataPipeline],
-    model_runners, #: Dict[str, model.RunModel],
-    amber_relaxer: relax.AmberRelaxation,
+    run_multimer_system: bool,
+    num_ensemble: int,
+    num_predictions_per_model: int,
     benchmark: bool,
-    random_seed: int,
     models_to_relax: ModelsToRelax,
     alignments_only: bool):
   """Predicts structure using AlphaFold for the given sequence."""
@@ -267,6 +267,11 @@ def predict_structure(
     else:
       with open(features_output_path, 'wb') as f:
         pickle.dump(feature_dict, f, protocol=4)
+
+  model_runners, amber_relaxer = get_models(run_multimer_system=run_multimer_system, num_ensemble=num_ensemble, num_predictions_per_model=num_predictions_per_model)
+
+  random_seed = FLAGS.random_seed if FLAGS.random_seed else random.randrange(sys.maxsize // len(model_runners))
+  logging.info('Using random seed %d for the data pipeline', random_seed)
 
   unrelaxed_pdbs = {}
   unrelaxed_proteins = {}
@@ -396,6 +401,70 @@ def predict_structure(
         f.write(json.dumps(relax_metrics, indent=4))
 
 
+def get_models(run_multimer_system, num_ensemble, num_predictions_per_model):
+  model_runners = {}
+  model_names = config.MODEL_PRESETS[FLAGS.model_preset]
+  if FLAGS.models_to_use:
+    model_names =[m for m in model_names if m in FLAGS.models_to_use]
+  if len(model_names)==0:
+    raise ValueError(f'No models to run: {FLAGS.models_to_use} is not in {config.MODEL_PRESETS[FLAGS.model_preset]}')
+  for model_name in model_names:
+    model_config = config.model_config(model_name)
+    if run_multimer_system:
+      model_config.model.num_ensemble_eval = num_ensemble
+      if FLAGS.cross_chain_templates:
+        logging.info("Turning cross-chain templates ON (use at your own risk)")
+        model_config.model.embeddings_and_evoformer.cross_chain_templates = True
+      if FLAGS.cross_chain_templates_only:
+        logging.info("Turning cross-chain templates ON, in-chain templates OFF (use at your own risk)")
+        model_config.model.embeddings_and_evoformer.cross_chain_templates = False
+        model_config.model.embeddings_and_evoformer.cross_chain_templates_only = True
+    else:
+      model_config.data.eval.num_ensemble = num_ensemble
+    if FLAGS.dropout_rates:
+      FLAGS.dropout_rates = [float(FLAGS.dropout_rates[0]), float(FLAGS.dropout_rates[1])]
+      logging.info(f"Changing monomer dropout rates to: {FLAGS.dropout_rates}")
+      model_config.model.embeddings_and_evoformer.evoformer.msa_row_attention_with_pair_bias.dropout_rate = FLAGS.dropout_rates[0]
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_ending_node.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_starting_node.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.dropout_rate = FLAGS.dropout_rates[1]
+      
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_ending_node.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_starting_node.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.dropout_rate = FLAGS.dropout_rates[1]
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.dropout_rate = FLAGS.dropout_rates[1]
+
+    model_config.model.num_recycle = FLAGS.max_recycles
+    model_config.model.global_config.eval_dropout = FLAGS.dropout
+    model_config.model.recycle_early_stop_tolerance=FLAGS.early_stop_tolerance
+    logging.info(f'Setting max_recycles to {model_config.model.num_recycle}')
+    logging.info(f'Setting early stop tolerance to {model_config.model.recycle_early_stop_tolerance}')
+    logging.info(f'Setting dropout to {model_config.model.global_config.eval_dropout}')
+    
+    amber_relaxer = None
+
+    if not FLAGS.alignments_only:
+      model_params = data.get_model_haiku_params(
+          model_name=model_name, data_dir=FLAGS.data_dir)
+      model_runner = model.RunModel(model_config, model_params)
+      for i in range(FLAGS.nstruct_start, num_predictions_per_model+1):
+        model_runners[f'{model_name}_pred_{i}'] = model_runner
+
+      logging.info('Have %d models: %s', len(model_runners),
+                  list(model_runners.keys()))
+
+      amber_relaxer = relax.AmberRelaxation(
+          max_iterations=RELAX_MAX_ITERATIONS,
+          tolerance=RELAX_ENERGY_TOLERANCE,
+          stiffness=RELAX_STIFFNESS,
+          exclude_residues=RELAX_EXCLUDE_RESIDUES,
+          max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
+          use_gpu=FLAGS.use_gpu_relax)
+      
+  return model_runners, amber_relaxer
+
+
 def main(argv):
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
@@ -486,6 +555,7 @@ def main(argv):
         monomer_data_pipeline=monomer_data_pipeline,
         jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
         uniprot_database_path=FLAGS.uniprot_database_path,
+        use_mmseqs2_align=(FLAGS.mmseqs2_binary_path is not None),
         use_precomputed_msas=FLAGS.use_precomputed_msas,
         max_uniprot_hits=FLAGS.uniprot_max_hits,
         separate_homomer_msas=FLAGS.separate_homomer_msas,
@@ -496,71 +566,6 @@ def main(argv):
     num_predictions_per_model = FLAGS.num_monomer_predictions_per_model
     data_pipeline = monomer_data_pipeline
 
-  model_runners = {}
-  model_names = config.MODEL_PRESETS[FLAGS.model_preset]
-  if FLAGS.models_to_use:
-    model_names =[m for m in model_names if m in FLAGS.models_to_use]
-  if len(model_names)==0:
-    raise ValueError(f'No models to run: {FLAGS.models_to_use} is not in {config.MODEL_PRESETS[FLAGS.model_preset]}')
-  for model_name in model_names:
-    model_config = config.model_config(model_name)
-    if run_multimer_system:
-      model_config.model.num_ensemble_eval = num_ensemble
-      if FLAGS.cross_chain_templates:
-        logging.info("Turning cross-chain templates ON (use at your own risk)")
-        model_config.model.embeddings_and_evoformer.cross_chain_templates = True
-      if FLAGS.cross_chain_templates_only:
-        logging.info("Turning cross-chain templates ON, in-chain templates OFF (use at your own risk)")
-        model_config.model.embeddings_and_evoformer.cross_chain_templates = False
-        model_config.model.embeddings_and_evoformer.cross_chain_templates_only = True
-    else:
-      model_config.data.eval.num_ensemble = num_ensemble
-    if FLAGS.dropout_rates:
-      FLAGS.dropout_rates = [float(FLAGS.dropout_rates[0]), float(FLAGS.dropout_rates[1])]
-      logging.info(f"Changing monomer dropout rates to: {FLAGS.dropout_rates}")
-      model_config.model.embeddings_and_evoformer.evoformer.msa_row_attention_with_pair_bias.dropout_rate = FLAGS.dropout_rates[0]
-      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_ending_node.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_starting_node.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.dropout_rate = FLAGS.dropout_rates[1]
-      
-      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_ending_node.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_starting_node.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.dropout_rate = FLAGS.dropout_rates[1]
-      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.dropout_rate = FLAGS.dropout_rates[1]
-
-    model_config.model.num_recycle = FLAGS.max_recycles
-    model_config.model.global_config.eval_dropout = FLAGS.dropout
-    model_config.model.recycle_early_stop_tolerance=FLAGS.early_stop_tolerance
-    logging.info(f'Setting max_recycles to {model_config.model.num_recycle}')
-    logging.info(f'Setting early stop tolerance to {model_config.model.recycle_early_stop_tolerance}')
-    logging.info(f'Setting dropout to {model_config.model.global_config.eval_dropout}')
-    
-    amber_relaxer = None
-    random_seed = FLAGS.random_seed
-    if not FLAGS.alignments_only:
-      model_params = data.get_model_haiku_params(
-          model_name=model_name, data_dir=FLAGS.data_dir)
-      model_runner = model.RunModel(model_config, model_params)
-      for i in range(FLAGS.nstruct_start, num_predictions_per_model+1):
-        model_runners[f'{model_name}_pred_{i}'] = model_runner
-
-      logging.info('Have %d models: %s', len(model_runners),
-                  list(model_runners.keys()))
-
-      amber_relaxer = relax.AmberRelaxation(
-          max_iterations=RELAX_MAX_ITERATIONS,
-          tolerance=RELAX_ENERGY_TOLERANCE,
-          stiffness=RELAX_STIFFNESS,
-          exclude_residues=RELAX_EXCLUDE_RESIDUES,
-          max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
-          use_gpu=FLAGS.use_gpu_relax)
-
-      
-      if random_seed is None:
-        random_seed = random.randrange(sys.maxsize // len(model_runners))
-      logging.info('Using random seed %d for the data pipeline', random_seed)
-
   # Predict structure for each of the sequences.
   for i, fasta_path in enumerate(FLAGS.fasta_paths):
     fasta_name = fasta_names[i]
@@ -569,10 +574,10 @@ def main(argv):
         fasta_name=fasta_name,
         output_dir_base=FLAGS.output_dir,
         data_pipeline=data_pipeline,
-        model_runners=model_runners,
-        amber_relaxer=amber_relaxer,
+        run_multimer_system=run_multimer_system,
+        num_predictions_per_model=num_predictions_per_model,
+        num_ensemble=num_ensemble,
         benchmark=FLAGS.benchmark,
-        random_seed=random_seed,
         models_to_relax=FLAGS.models_to_relax,
         alignments_only=FLAGS.alignments_only)
 
