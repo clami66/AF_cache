@@ -23,7 +23,7 @@ def convert_alignment(in_alignment, out_dir, custom_taxids=None):
     print(f"{in_alignment} loaded")
     # always write first (target) sequence to file
     target_header = ""
-    
+
     while not target_header.startswith(">"):
         target_header = next(a3m_data)
     target_seq = next(a3m_data)
@@ -40,6 +40,8 @@ def convert_alignment(in_alignment, out_dir, custom_taxids=None):
 
     # prepare the directory structure as AF wants it
     target_id = target_header.strip().strip(">").split()[0]
+    if "|" in target_id:
+        target_id = target_id.split("|")[1]
     print(f"Target ID: {target_id}")
     Path(args.out_dir, target_id, "msas", "A").mkdir(parents=True, exist_ok=True)
     a3m_out = open(f"{args.out_dir}/{target_id}/msas/A/mmseqs2_hits.a3m", "w")
