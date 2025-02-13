@@ -21,7 +21,7 @@ def get_slurm_profile(proj_id, max_len, log_path):
 export TF_FORCE_UNIFIED_MEMORY='1'
 export XLA_PYTHON_CLIENT_MEM_FRACTION='6.0'
 
-module load Anaconda/2021.05-nsc1
+module load Mambaforge/23.3.1-1-hpc1-bdist
 """
 
 
@@ -43,10 +43,8 @@ def get_records_from_pair_list(list_file, fasta_path):
         p1, p2 = i.strip("\n").split("_")
         fasta_p1 = Path(fasta_path, f"{p1}.fasta")
         fasta_p2 = Path(fasta_path, f"{p2}.fasta")
-        
         record_p1 = get_fasta_record(fasta_p1)
         record_p2 = get_fasta_record(fasta_p2)
-        
         if record_p1 and record_p2:
             pairlist.append([(record_p1, p1), (record_p2, p2)])
     return pairlist
@@ -57,7 +55,7 @@ def get_records_from_dir(fasta_files: list):
     for ff in fasta_files:
         fasta_path = Path(ff)
         record = get_fasta_record(fasta_path)
-        
+
         if record:
             fasta_records.append((record, fasta_path.stem))
     return fasta_records
@@ -94,7 +92,6 @@ def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, 
 
         pair_id = f"{pair[0][1]}_{pair[1][1]}"
         pair_records = (pair[0][0], pair[1][0])
-        
         af_output = glob(f"{out_dir}/{pair_id}/unrelaxed*pdb")
 
         if not af_output or overwrite_output:
