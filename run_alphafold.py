@@ -267,8 +267,9 @@ def predict_structure(
     else:
       with open(features_output_path, 'wb') as f:
         pickle.dump(feature_dict, f, protocol=4)
-
-  model_runners, amber_relaxer = get_models(run_multimer_system=run_multimer_system, num_ensemble=num_ensemble, num_predictions_per_model=num_predictions_per_model)
+  global model_runners
+  if not model_runners:
+    model_runners, amber_relaxer = get_models(run_multimer_system=run_multimer_system, num_ensemble=num_ensemble, num_predictions_per_model=num_predictions_per_model)
 
   random_seed = FLAGS.random_seed if FLAGS.random_seed else random.randrange(sys.maxsize // len(model_runners))
   logging.info('Using random seed %d for the data pipeline', random_seed)
@@ -566,6 +567,8 @@ def main(argv):
     num_predictions_per_model = FLAGS.num_monomer_predictions_per_model
     data_pipeline = monomer_data_pipeline
 
+  global model_runners 
+  model_runners = None
   # Predict structure for each of the sequences.
   for i, fasta_path in enumerate(FLAGS.fasta_paths):
     fasta_name = fasta_names[i]
