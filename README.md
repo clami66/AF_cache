@@ -1,13 +1,14 @@
-# Efficiently run all-vs-all dimer predictions with AF_pad and mmseqs2
+# Efficiently run all-vs-all dimer predictions with AF_cache and mmseqs2
 
 1. Activate conda env:
 
 ```
 module load Mambaforge/23.3.1-1-hpc1-bdist
-conda activate /proj/beyondfold/apps/.conda/envs/af_server
+conda activate /proj/beyondfold/apps/.conda/envs/AF_cache
+export AF_CACHE=/proj/beyondfold/apps/alphafoldv2.3.1_pad
 
 # alternately you can just launch python scripts from outside the environment with:
-# conda run -p /proj/beyondfold/apps/.conda/envs/af_server python ...
+# conda run -p /proj/beyondfold/apps/.conda/envs/AF_cache python ...
 ```
 
 2. Concatenate all fasta sequences into a single file. This is necessary only to run MMseqs2
@@ -18,11 +19,23 @@ cat fasta_seqs/*.fasta > all_seqs.fasta
 
 2. Run alignments with MMseqs2
 
+GPU:
 ```
-mmseqs_db=/proj/beyondfold/apps/colabfold_databases/
-mmseqs_bin=/proj/beyondfold/apps/.conda/envs/colabfold/bin/mmseqs
-python /proj/beyondfold/apps/alphafoldv2.3.1_pad/run_msa_tool.py all_seqs.fasta mmseqs2 $mmseqs_db --out_dir path/to/alignments/outdir --mmseqs $mmseqs_bin
+mmseqs_db=/proj/beyondfold/apps/colabfold_databases/gpu/
+mmseqs_bin=/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs
+n_gpu=$(nvidia-smi --list-gpus | wc -l)
+n_cpu= $((32*n_gpu))
+python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir ./ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env
 ```
+
+CPU:
+```
+mmseqs_db=/proj/beyondfold/apps/colabfold_databases/cpu/
+mmseqs_bin=/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs
+n_cpu=32
+python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir ./ --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env
+```
+
 
     Expected outputs:
     * path/to/alignments/outdir : folder including N .a3m files, one for each of the N fasta sequences in all_seqs.fasta
@@ -30,11 +43,8 @@ python /proj/beyondfold/apps/alphafoldv2.3.1_pad/run_msa_tool.py all_seqs.fasta 
 3. The alignments are written as a series of `.a3m` files in path/to/alignments/outdir/. These have to be converted to AlphaFold-like alignments, then we make AlphaFold parse the alignments and save them into pickle files. This is done in parallel for all a3m files at once:
 
 ```
-# first parameter: the alignment output dir from the previous step
-# second parameter: the original folder containing all the fasta files
-# third parameter: the main path where all AlphaFold predictions will be generated
-# fourth parameter: a directory that will contain all of the feature `.pkl` files (one for each sequence in fasta dir)
-/proj/beyondfold/users/x_clami/mmseqs_benchmark/scripts/format_mmseqs_alignments.sh path/to/alignments/outdir/ fasta_seqs/ path/to/AF/outdir path/to/pickle/cache
+python $AF_CACHE/prepare_alignments.py path/to/alignments/outdir/ path/to/AF/outdir
+ls fasta_seqs/*.fasta | parallel -j $n_cpu python $AF_CACHE/parse_features.py --flagfile $AF_CACHE/multimer_full_dbs_v3.flag --output_dir path/to/AF/outdir --fasta_paths={} --pickle_cache path/to/pickle_cache/ --alignments_only
 ```
 
     Expected outputs:
@@ -44,7 +54,7 @@ python /proj/beyondfold/apps/alphafoldv2.3.1_pad/run_msa_tool.py all_seqs.fasta 
 3. Generate all-vs-all fasta files, AF folder structures and package together jobs in multimer scripts:
 
 ```
-python /proj/beyondfold/users/x_clami/mmseqs_benchmark/scripts/format_alphafold_jobs.py fasta_seqs/ path/to/AF/outdir --pickle_dir path/to/pickle/cache --write_fastas --proj_id <berzelius-proj-id>
+python $AF_CACHE/format_alphafold_jobs.py fasta_seqs/ path/to/AF/outdir --pickle_dir path/to/pickle/cache --write_fastas --proj_id <berzelius-proj-id>
 ```
 
     Expected outputs:
