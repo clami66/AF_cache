@@ -89,6 +89,7 @@ def _parse_sequence_identifier(msa_sequence_identifier: str, is_mmseqs: bool = F
   if matches:
     return Identifiers(
         species_id=matches.group('SpeciesIdentifier'))
+#        species_id=matches.group('TaxID'))
   return Identifiers()
 
 

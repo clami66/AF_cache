@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import shutil
 import subprocess
 from pathlib import Path
 from absl import logging
@@ -20,9 +21,10 @@ class MMseqs2:
                diff: int = 3000,
                s: float = 8,
                db_load_mode: int = 0,
-               threads: int = 32,
+               n_cpu: int = 32,
                gpu: bool = True,
                gpu_server: bool = False,
+               msa_out_dir: Path = None,
            ):
         self.mmseqs = Path(binary_path)
         self.uniref_db = Path(uniref_db)
@@ -31,9 +33,10 @@ class MMseqs2:
         self.diff = str(diff)
         self.s = s
         self.db_load_mode = str(db_load_mode)
-        self.threads = self.search_threads = str(threads)
+        self.threads = str(n_cpu)
         self.gpu = gpu
         self.gpu_server = gpu_server
+        self.base = msa_out_dir
 
         self.align_eval = "10"
         self.qsc = "0.8"
@@ -80,11 +83,11 @@ class MMseqs2:
                              "-a", 
                              "-e", "0.1", 
                              "--max-seqs", "10000"]
-        
+
         if self.gpu:
             self.search_param.extend(["--gpu", "1", "--prefilter-mode", "1"]) # gpu version only supports ungapped prefilter currently
         else:
-            self.search_param.extend(["--prefilter-mode", "0"])
+#            self.search_param.extend(["--prefilter-mode", "0"])
             if self.s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
                 self.search_param += ["-s", "{:.1f}".format(self.s)]
             else:
@@ -108,70 +111,33 @@ class MMseqs2:
         logging.info(f"Running {self.mmseqs} {params_log}")
         subprocess.check_call([self.mmseqs] + params)
 
-    def query_db(self, base: Path, db: str):
+    def cleanup(self, base):
+        self.run_mmseqs(["rmdb", base.joinpath("res_exp_realign_filter")])
+        self.run_mmseqs(["rmdb", base.joinpath("res_exp_realign")])
+        self.run_mmseqs(["rmdb", base.joinpath("res_exp")])
+        self.run_mmseqs(["rmdb", base.joinpath("res")])
+        self.run_mmseqs(["rmdb", base.joinpath("uniref.a3m")])
+        self.run_mmseqs(["rmdb", base.joinpath("final.a3m")])
+        self.run_mmseqs(["rmdb", base.joinpath("prof_res")])
+        self.run_mmseqs(["rmdb", base.joinpath("prof_res_h")])
+        self.run_mmseqs(["rmdb", base.joinpath("qdb")])
+        self.run_mmseqs(["rmdb", base.joinpath("qdb_h")])
+        shutil.rmtree(base.joinpath("tmp"))
 
-        db = self.uniref_db if db == "uniref" else self.metagenomic_db
-        db_1 = self.uniref_db_1 if db == "uniref" else self.metagenomic_db_1
-        db_2 = self.uniref_db_2 if db == "uniref" else self.metagenomic_db_2
-        out_path = base.joinpath("uniref.a3m") if db == "uniref" else base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")
-
-        self.run_mmseqs(["search", 
-                         base.joinpath("qdb") if db == "uniref" else base.joinpath("prof_res"),
-                         db,
-                         base.joinpath("res"), 
-                         base.joinpath("tmp"), 
-                        "--threads", self.search_threads] + self.search_param)
-
-        if db == "uniref":
-            self.run_mmseqs(["mvdb", base.joinpath("tmp/latest/profile_1"), base.joinpath("prof_res")])
-            self.run_mmseqs(["lndb", base.joinpath("qdb_h"), base.joinpath("prof_res_h")])
-        self.run_mmseqs(["expandaln",
-                         base.joinpath("qdb") if db == "uniref" else base.joinpath("prof_res"),
-                         db_1,
-                         base.joinpath("res"),
-                         db_2,
-                         base.joinpath("res_exp"),
-                         "--db-load-mode", self.db_load_mode,
-                         "--threads", self.threads] + self.expand_param)
-
-        self.run_mmseqs(["align",
-                         base.joinpath("prof_res") if db == "uniref" else base.joinpath("tmp/latest/profile_1"), 
-                         db_1,
-                         base.joinpath("res_exp"), 
-                         base.joinpath("res_exp_realign"),
-                         "--db-load-mode", self.db_load_mode,
-                         "-e", self.align_eval,
-                         "--max-accept", self.max_accept,
-                         "--threads", self.threads,
-                         "--alt-ali", "10", "-a"])
-
-        self.run_mmseqs(["filterresult", base.joinpath("qdb"), 
-                         db_1,
-                         base.joinpath("res_exp_realign"), 
-                         base.joinpath("res_exp_realign_filter"), 
-                         "--db-load-mode", self.db_load_mode, 
-                         "--qid", "0", 
-                         "--qsc", self.qsc, 
-                         "--diff", "0", 
-                         "--threads", self.threads,
-                         "--max-seq-id", "1.0", 
-                         "--filter-min-enable", "100"])
-        self.run_mmseqs(["result2msa", 
-                         base.joinpath("qdb"), 
-                         db_1,
-                         base.joinpath("res_exp_realign_filter"), 
-                         out_path, 
-                         "--msa-format-mode", "3", 
-                         "--db-load-mode", self.db_load_mode, 
-                         "--threads", self.threads] + self.filter_param)
-            
-        return
+        if self.metagenomic_db is not None:
+            self.run_mmseqs(["rmdb", base.joinpath("res_env_exp_realign_filter")])
+            self.run_mmseqs(["rmdb", base.joinpath("res_env_exp_realign")])
+            self.run_mmseqs(["rmdb", base.joinpath("res_env_exp")])
+            self.run_mmseqs(["rmdb", base.joinpath("res_env")])
+            self.run_mmseqs(["rmdb", base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
+            shutil.rmtree(base.joinpath("tmp_env"))
 
     def query(
         self, fasta_path: str,
     ):
 
-        with utils.tmpdir_manager() as query_tmp_dir:
+        delete = False if self.base is not None else True
+        with utils.tmpdir_manager(base_dir=self.base, prefix="alignments", delete=delete) as query_tmp_dir:
             base = Path(query_tmp_dir)
             self.run_mmseqs(
                 ["createdb", fasta_path,  base.joinpath("qdb"), "--shuffle", "0"],
@@ -182,9 +148,18 @@ class MMseqs2:
                              self.uniref_db,
                              base.joinpath("res"), 
                              base.joinpath("tmp"), 
-                             "--threads", self.search_threads] + self.search_param)
+                             "--threads", self.threads] + self.search_param)
             self.run_mmseqs(["mvdb", base.joinpath("tmp/latest/profile_1"), base.joinpath("prof_res")])
             self.run_mmseqs(["lndb", base.joinpath("qdb_h"), base.joinpath("prof_res_h")])
+
+            if self.metagenomic_db is not None: # running this here improves GPU efficiency
+                self.run_mmseqs(["search", 
+                                 base.joinpath("prof_res"), 
+                                 self.metagenomic_db, 
+                                 base.joinpath("res_env"), 
+                                 base.joinpath("tmp_env"), 
+                                 "--threads", self.threads] + self.search_param)
+            
             self.run_mmseqs(["expandaln",
                              base.joinpath("qdb"),
                              self.uniref_db_1,
@@ -193,7 +168,6 @@ class MMseqs2:
                              base.joinpath("res_exp"),
                              "--db-load-mode", self.db_load_mode,
                              "--threads", self.threads] + self.expand_param)
-
             self.run_mmseqs(["align",
                              base.joinpath("prof_res"), 
                              self.uniref_db_1,
@@ -204,7 +178,6 @@ class MMseqs2:
                              "--max-accept", self.max_accept,
                              "--threads", self.threads,
                              "--alt-ali", "10", "-a"])
-
             self.run_mmseqs(["filterresult", base.joinpath("qdb"), 
                              self.uniref_db_1,
                              base.joinpath("res_exp_realign"), 
@@ -226,12 +199,6 @@ class MMseqs2:
                              "--threads", self.threads] + self.filter_param)
 
             if self.metagenomic_db is not None:
-                self.run_mmseqs(["search", 
-                                 base.joinpath("prof_res"), 
-                                 self.metagenomic_db, 
-                                 base.joinpath("res_env"), 
-                                 base.joinpath("tmp"), 
-                                 "--threads", self.threads] + self.search_param)
                 self.run_mmseqs(["expandaln", 
                                  base.joinpath("prof_res"), 
                                  self.metagenomic_db_1, 
@@ -243,7 +210,7 @@ class MMseqs2:
                                  "--db-load-mode", self.db_load_mode, 
                                  "--threads", self.threads])
                 self.run_mmseqs(["align", 
-                                 base.joinpath("tmp/latest/profile_1"), 
+                                 base.joinpath("tmp_env/latest/profile_1"), 
                                  self.metagenomic_db_1, 
                                  base.joinpath("res_env_exp"), 
                                  base.joinpath("res_env_exp_realign"), 
@@ -278,6 +245,8 @@ class MMseqs2:
                 self.run_mmseqs(["mvdb", base.joinpath("uniref.a3m"), base.joinpath("final.a3m")])
 
             self.run_mmseqs(["unpackdb", base.joinpath("final.a3m"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", ".a3m"])
+
+            self.cleanup(base)
 
             with open(base.joinpath("0.a3m")) as f:
                 a3m = f.readlines()
