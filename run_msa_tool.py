@@ -1,10 +1,11 @@
 import os
 import sys
 import math
+import glob
 import argparse
 import subprocess
 from pathlib import Path
-from shutil import which
+from shutil import which, move, rmtree
 from alphafold.data.tools import hhblits, jackhmmer, mmseqs2
 from alphafold.data.pipeline import run_msa_tool
 import numpy as np
@@ -77,4 +78,10 @@ _ = run_msa_tool(msa_runner=runner,
                         max_sto_sequences=max_hits
                         )
 
-
+if alignment_type in ["mmseqs", "mmseqs2"]:
+    os.remove(msa_out_path)
+    if os.path.exists(f"{msa_out_dir}/alignments"):
+        rmtree(f"{msa_out_dir}/alignments")
+    alignments_dir = glob.glob(f"{msa_out_dir}/alignments?*")[0] # only one temp output dir should be there
+    move(alignments_dir, f"{msa_out_dir}/alignments") # older alignments will be overwritten
+    

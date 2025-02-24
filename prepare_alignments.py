@@ -42,6 +42,7 @@ def convert_alignment(in_alignment, out_dir, custom_taxids=None):
     target_id = target_header.strip().strip(">").split()[0]
     if "|" in target_id:
         target_id = target_id.split("|")[1]
+    target_id = re.sub('[^0-9a-zA-Z]+', '', target_id)
     print(f"Target ID: {target_id}")
     Path(args.out_dir, target_id, "msas", "A").mkdir(parents=True, exist_ok=True)
     a3m_out = open(f"{args.out_dir}/{target_id}/msas/A/mmseqs2_hits.a3m", "w")
