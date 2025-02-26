@@ -785,7 +785,7 @@ def _process_single_hit(
   except Error as e:
     error = ('%s_%s (sum_probs: %.2f, rank: %d): feature extracting errors: '
              '%s, mmCIF parsing errors: %s'
-             % (hit_pdb_code, hit_chain_id, hit.sum_probs, hit.index,
+             % (hit_pdb_code, hit_chain_id, -1.0, -1,
                 str(e), parsing_result.errors))
     return SingleHitResult(features=None, error=error, warning=None)
 

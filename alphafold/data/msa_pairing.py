@@ -181,7 +181,6 @@ def pair_sequences(examples: List[pipeline.FeatureDict]
   """Returns indices for paired MSA sequences across chains."""
 
   num_examples = len(examples)
-  print(num_examples)
   all_chain_species_dict = []
   common_species = set()
   for chain_features in examples:
