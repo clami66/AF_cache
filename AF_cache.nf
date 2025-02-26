@@ -148,7 +148,7 @@ workflow {
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    pickle_cache = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect()
+    pickle_cache = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect().flatten().take(1)
     
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache).sh.collect().flatten()
