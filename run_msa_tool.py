@@ -17,7 +17,7 @@ parser.add_argument("db_path", help = "Path to database for alignment")
 parser.add_argument("--out_dir", type = str, help = "Output path for the MSA file")
 parser.add_argument("--max_hits", default=None, help="Number of max hits to report")
 parser.add_argument("--use_precomputed_msas", action="store_true")
-parser.add_argument("--n_cpu", default=32)
+parser.add_argument("--n_cpu", default=32, type = int)
 parser.add_argument("--n_iter", type = int, default=None)
 parser.add_argument("--colab_dir", default="/proj/beyondfold/apps/ColabFold/", help="ColabFold code directory to run MMseqs2 alignments")
 parser.add_argument("--mmseqs", default="mmseqs", help="mmseqs binary path")
@@ -26,6 +26,7 @@ parser.add_argument("--db2", default="colabfold_envdb_202108_db", help="ColabFol
 parser.add_argument("--use-env", action="store_true", help="Use env DB in MMseqs2")
 parser.add_argument("--gpu", action="store_true", help="Use GPU-accelerated MMseqs2")
 parser.add_argument("--gpu_server", action="store_true", help="Launch MMseqs2 GPU server")
+parser.add_argument("--max_accept", default=100000, help="MMseqs2 max accepted alignments")
 
 args = parser.parse_args()
 
@@ -63,6 +64,7 @@ elif alignment_type in ["mmseqs", "mmseqs2"]:
                                 n_cpu=n_cpu,
                                 gpu=args.gpu,
                                 gpu_server=args.gpu_server,
+                                max_accept=args.max_accept,
                                 )
     
 
@@ -84,4 +86,4 @@ if alignment_type in ["mmseqs", "mmseqs2"]:
         rmtree(f"{msa_out_dir}/alignments")
     alignments_dir = glob.glob(f"{msa_out_dir}/alignments?*")[0] # only one temp output dir should be there
     move(alignments_dir, f"{msa_out_dir}/alignments") # older alignments will be overwritten
-    
+
