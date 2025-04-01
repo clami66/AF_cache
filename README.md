@@ -19,7 +19,8 @@ $ cat fasta_seqs/*.fasta > all_seqs.fasta
 3. Run the Nextflow workflow on a GPU node with e.g. 4 GPUs:
 
 ```
-$ nextflow AF_cache.nf --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6
+# -resume avoids re-running completed steps if the job crashed
+$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6
 ```
 
 To restrict the interactions to a list of `prot1_prot2` pairs, pass the absolute path to the list `multimers_list`:
@@ -30,7 +31,7 @@ YP00901869113_YP00901869113
 YP00901869012_YP00901869012
 ...
 
-$ nextflow AF_cache.nf --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6 --file_list $(realpath multimers_list)
+$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6 --file_list $(realpath multimers_list)
 ```
 
 ## Running alignments and other steps separately
