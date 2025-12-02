@@ -8,11 +8,13 @@ params.mmseqs_db = '/proj/common-datasets/LocalColabFold/'
 params.mmseqs_bin = '/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs'
 params.af_dir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad'
 params.af_flagfile = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/multimer_full_dbs_v3.flag'
+params.db_flagfile = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/databases.flag'
 params.use_env = false
 params.n_gpu = 8
 params.max_cpus = 64
 params.file_list = ''
 params.test = false
+params.af3 = false
 
 
 process split_fasta {
@@ -103,7 +105,7 @@ process parse_features {
     script:
     """
     mkdir -p pickle_cache
-    python ${params.af_dir}/parse_features.py --flagfile ${params.af_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/ --alignments_only
+    python ${params.af_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/
     """
 }
 
@@ -137,7 +139,11 @@ process run_af_jobs {
     
     script:
     """
-    sh $sbatch_script
+    if ${params.test}; then
+        echo "Launching $sbatch_script"
+    else
+        sh $sbatch_script
+    fi
     """
 }
 
