@@ -17,31 +17,14 @@ import enum
 import json
 import os
 import pathlib
-import pickle
-import random
 import shutil
-import sys
-import time
-from typing import Any, Dict, Mapping, Union
 
 from absl import app
 from absl import flags
 from absl import logging
-from alphafold.data import pipeline
-from alphafold.data import pipeline_multimer
-from alphafold.data import templates
-from alphafold.data.tools import hhsearch
-from alphafold.data.tools import hmmsearch
-from alphafold.model import config
 
 logging.set_verbosity(logging.INFO)
 MAX_TEMPLATE_HITS = 20
-
-@enum.unique
-class ModelsToRelax(enum.Enum):
-  ALL = 0
-  BEST = 1
-  NONE = 2
 
 flags.DEFINE_list(
     'fasta_paths', None, 'Paths to FASTA files, each containing a prediction '
@@ -104,11 +87,6 @@ flags.DEFINE_enum('model_preset', 'monomer',
                   'Choose preset model configuration - the monomer model, '
                   'the monomer model with extra ensembling, monomer model with '
                   'pTM head, or multimer model')
-flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
-                     'pipeline. By default, this is randomly generated. Note '
-                     'that even if this is set, Alphafold may still not be '
-                     'deterministic, because processes like GPU inference are '
-                     'nondeterministic.')
 flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
                      'have been written to disk instead of running the MSA '
                      'tools. The MSA files are looked up in the output '
@@ -126,6 +104,7 @@ flags.DEFINE_boolean('no_mgnify', False, 'Do not run/use mgnify alignments')
 flags.DEFINE_integer('redundancy_reduce_templates', 100, 'Percentage of redundancy reduction for template hits')
 flags.DEFINE_list('pad_to_size', [None, None], 'Pad input features to a given seq. length x MSA depth. '
                      'This is useful when processing multiple sequences at once to avoid re-compiling the models')
+flags.DEFINE_boolean('af3', False, 'Parse features into AF3 .json input files')
 
 FLAGS = flags.FLAGS
 
@@ -138,9 +117,53 @@ def _check_flag(flag_name: str,
                      f'"--{other_flag_name}={FLAGS[other_flag_name].value}".')
 
 
+def parse_af3():
+  from Bio import SeqIO
+  import hashlib
+  fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
+
+  for i, fasta_path in enumerate(FLAGS.fasta_paths):
+    fasta_name = fasta_names[i]
+    output_dir = os.path.join(FLAGS.output_dir, fasta_name)
+    
+    msa_path = os.path.realpath(os.path.join(output_dir, "msa/A/mmseqs2_hits.a3m"))
+
+    target_sequences_dict = []
+    target_sequence = [record.seq for record in SeqIO.parse(fasta_path, "fasta")][0]
+    sequence_hash = hashlib.md5(target_sequence.encode()).hexdigest()
+    out_json = os.path.join(FLAGS.pickle_cache, f"{sequence_hash}.json")
+    chain_dict = {"protein": {"id": "A",
+                              "sequence": str(target_sequence),
+                              "unpairedMsaPath": str(msa_path),
+                              "pairedMsa": "",
+                              "templates": None,
+                              }}
+    target_sequences_dict.append(chain_dict)
+    json_data = {"name": "parse",
+                 "modelSeeds": 1,
+                 "sequences": target_sequences_dict,
+                 "dialect": "alphafold3",
+                 "version": 2,
+                }
+    with open(out_json, "w") as out:
+      json.dump(json_data, out, indent=4, sort_keys=True)
+  return out_json
+
+
 def main(argv):
+  # delay imports
+  from alphafold.data import pipeline
+  from alphafold.data import pipeline_multimer
+  from alphafold.data import templates
+  from alphafold.data.tools import hhsearch
+  from alphafold.data.tools import hmmsearch
+  from alphafold.model import config
+
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
+
+  if FLAGS.af3:
+    return parse_af3()
 
   for tool_name in (
       'jackhmmer', 'hhblits', 'hhsearch', 'hmmsearch', 'hmmbuild', 'kalign'):
