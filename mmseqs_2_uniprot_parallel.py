@@ -97,9 +97,7 @@ def convert_alignment(in_alignment, out_dir, taxid=True, duplicate=False, shortn
 
             if seqid in seqid_to_id:
                 memid = seqid_to_id[seqid]
-                print(memid)
                 memid = custom_taxid_dic[memid] if memid in custom_taxid_dic else memid
-                print(" ", memid)
                 if taxid:
                     memid = base64.urlsafe_b64encode(hashlib.md5(str(memid).encode('utf-8')).digest()).decode("utf-8").replace("_", "").replace("-", "")[:5].upper()
 
