@@ -35,19 +35,23 @@ def get_fasta_record(fasta_file):
     return record
 
 
-def get_records_from_pair_list(list_file, fasta_path, sep):
+def get_records_from_list(list_file, fasta_path, sep):
     with open(list_file, "r") as f:
 	    tmplist = f.readlines()
-    pairlist = []
+    multimer_list = []
     for i in tmplist:
-        p1, p2 = i.strip("\n").split(sep)
-        fasta_p1 = Path(fasta_path, f"{p1}.fasta")
-        fasta_p2 = Path(fasta_path, f"{p2}.fasta")
-        record_p1 = get_fasta_record(fasta_p1)
-        record_p2 = get_fasta_record(fasta_p2)
-        if record_p1 and record_p2:
-            pairlist.append([(record_p1, p1), (record_p2, p2)])
-    return pairlist
+        #p1, p2 = i.strip("\n").split(sep)
+        monomers = i.strip("\n").split(sep)
+        fastas = [Path(fasta_path, f"{p}.fasta") for p in monomers]
+        #fasta_p1 = Path(fasta_path, f"{p1}.fasta")
+        #fasta_p2 = Path(fasta_path, f"{p2}.fasta")
+        records = [get_fasta_record(fasta) for fasta in fastas]
+        #record_p1 = get_fasta_record(fasta_p1)
+        #record_p2 = get_fasta_record(fasta_p2)
+        multimer_list.append([(r, p) for r, p in zip(records, monomers)])
+        #if record_p1 and record_p2:
+        #    pairlist.append([(record_p1, p1), (record_p2, p2)])
+    return multimer_list
 
 
 def get_records_from_dir(fasta_files: list):
@@ -90,8 +94,8 @@ def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, 
         if not count % 1000:
             print(count)
 
-        pair_id = f"{pair[0][1]}_{pair[1][1]}"
-        pair_records = (pair[0][0], pair[1][0])
+        pair_id = "_".join([p[1] for p in pair])
+        pair_records = [p[0] for p in pair]
         af_output = glob(f"{out_dir}/{pair_id}/unrelaxed*pdb")
 
         if not af_output or overwrite_output:
@@ -101,10 +105,10 @@ def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, 
                 pair_folder.mkdir(parents=True, exist_ok=True)
 
                 with open(pair_fasta, "w") as pf:
-                    SeqIO.write(pair_records[0], pf, "fasta")
-                    SeqIO.write(pair_records[1], pf, "fasta")
+                    for pr in pair_records:
+                        SeqIO.write(pr, pf, "fasta")
 
-            pair_size = len(pair_records[0].seq) + len(pair_records[1].seq)
+            pair_size = sum([len(pr.seq) for pr in pair_records])
 
             pair_bin = splits[bisect(splits, pair_size)]
             pair_bins[pair_bin].append((str(pair_fasta), pair_size))
@@ -120,7 +124,7 @@ def main(args, af_args):
     out_dir = str(Path(args.out_dir).resolve())
 
     if args.file_list:
-        pairlist = get_records_from_pair_list(args.file_list, args.in_path, sep=args.list_separator)
+        pairlist = get_records_from_list(args.file_list, args.in_path, sep=args.list_separator)
         fasta_records = []
     else:
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
@@ -159,6 +163,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
     parser.add_argument("in_path", help = "Path to the directory containing the fasta files")
     parser.add_argument("--file_list", help = "Path to file containing a list of files to run (if not desire all against all)",default="")
+    parser.add_argument("--list_separator", default=" ", help="Character used to separate protein pairs in file list (--file_list)")
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
     parser.add_argument("--both_directions", action="store_true", default=False, help="Run AB as well as BA")
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
@@ -171,7 +176,6 @@ if __name__ == '__main__':
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
     parser.add_argument("--estimate_gpu_runtime", action="store_true")
     parser.add_argument("--conda_env", default="AF_cache", help="Name or path for AlphaFold conda env")
-    parser.add_argument("--list_separator", default="_", help="Character used to separate protein pairs in file list (--file_list)")
 
     args, unknownargs = parser.parse_known_args()
 
