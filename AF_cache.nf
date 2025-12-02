@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 outputDir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/outputs'
-params.conda_env = '/home/x_clami/.conda/envs/AF_cache'
+params.conda_env = '/proj/beyondfold/apps/.conda/envs/AF_cache'
 params.executor = 'slurm'
 params.proj_id = 'berzelius-2024-439'
 params.mmseqs_db = '/proj/common-datasets/LocalColabFold/'
@@ -123,7 +123,7 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.af_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --pickle_dir ${outputDir}/pickle_cache --write_fastas --proj_id ${params.proj_id} $file_list
+    python ${params.af_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} --pickle_dir ${outputDir}/pickle_cache --write_fastas --proj_id ${params.proj_id} $file_list
     """
 }
 
