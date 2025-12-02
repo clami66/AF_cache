@@ -40,17 +40,10 @@ def get_records_from_list(list_file, fasta_path, sep):
 	    tmplist = f.readlines()
     multimer_list = []
     for i in tmplist:
-        #p1, p2 = i.strip("\n").split(sep)
         monomers = i.strip("\n").split(sep)
         fastas = [Path(fasta_path, f"{p}.fasta") for p in monomers]
-        #fasta_p1 = Path(fasta_path, f"{p1}.fasta")
-        #fasta_p2 = Path(fasta_path, f"{p2}.fasta")
         records = [get_fasta_record(fasta) for fasta in fastas]
-        #record_p1 = get_fasta_record(fasta_p1)
-        #record_p2 = get_fasta_record(fasta_p2)
         multimer_list.append([(r, p) for r, p in zip(records, monomers)])
-        #if record_p1 and record_p2:
-        #    pairlist.append([(record_p1, p1), (record_p2, p2)])
     return multimer_list
 
 
