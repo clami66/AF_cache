@@ -35,12 +35,12 @@ def get_fasta_record(fasta_file):
     return record
 
 
-def get_records_from_pair_list(list_file, fasta_path):
+def get_records_from_pair_list(list_file, fasta_path, sep):
     with open(list_file, "r") as f:
 	    tmplist = f.readlines()
     pairlist = []
     for i in tmplist:
-        p1, p2 = i.strip("\n").split("_")
+        p1, p2 = i.strip("\n").split(sep)
         fasta_p1 = Path(fasta_path, f"{p1}.fasta")
         fasta_p2 = Path(fasta_path, f"{p2}.fasta")
         record_p1 = get_fasta_record(fasta_p1)
@@ -120,7 +120,7 @@ def main(args, af_args):
     out_dir = str(Path(args.out_dir).resolve())
 
     if args.file_list:
-        pairlist = get_records_from_pair_list(args.file_list, args.in_path)
+        pairlist = get_records_from_pair_list(args.file_list, args.in_path, sep=args.list_separator)
         fasta_records = []
     else:
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
@@ -171,6 +171,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
     parser.add_argument("--estimate_gpu_runtime", action="store_true")
     parser.add_argument("--conda_env", default="AF_cache", help="Name or path for AlphaFold conda env")
+    parser.add_argument("--list_separator", default="_", help="Character used to separate protein pairs in file list (--file_list)")
 
     args, unknownargs = parser.parse_known_args()
 
