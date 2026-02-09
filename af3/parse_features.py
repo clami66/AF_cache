@@ -42,12 +42,6 @@ _HMMBUILD_BINARY_PATH = flags.DEFINE_string(
     shutil.which('hmmbuild'),
     'Path to the Hmmbuild binary.',
 )
-#_JACKHMMER_BINARY_PATH = flags.DEFINE_string(
-#    'jackhmmer_binary_path',
-#    shutil.which('jackhmmer'),
-#    'Path to the Jackhmmer binary.',
-#)
-# Template search configuration.
 _MAX_TEMPLATE_DATE = flags.DEFINE_string(
     'max_template_date',
     '2021-09-30',  # By default, use the date from the AlphaFold 3 paper.
@@ -86,7 +80,6 @@ def main(_):
           max_template_date=datetime.date.fromisoformat(FLAGS.max_template_date),
       ),
   )
-  print(f"{FLAGS.db_dir}/mmcif_files")
   fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
 
   for i, fasta_path in enumerate(FLAGS.fasta_paths):

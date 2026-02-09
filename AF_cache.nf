@@ -127,7 +127,7 @@ process format_af_jobs {
 }
 
 process run_af_jobs {
-    executor = 'slurm'
+    executor = "${params.executor}"
     clusterOptions "-A ${params.proj_id} -t 3-0 --gpus 1"
     publishDir {outputDir}
     

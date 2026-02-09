@@ -1,16 +1,10 @@
 import re
-import os
 import glob
-import pickle
 import string
-import base64
-import hashlib
 import argparse
-from sys import argv
 from pathlib import Path
 from functools import partial
-from multiprocessing import Pool, TimeoutError
-from Bio import AlignIO
+from multiprocessing import Pool
 
 
 def convert_alignment(in_alignment, out_dir, custom_taxids=None, use_taxid=True):
@@ -57,7 +51,6 @@ def convert_alignment(in_alignment, out_dir, custom_taxids=None, use_taxid=True)
     print(f"Starting conversion: {target_id}")
     for line in a3m_data:
         if line.startswith(">"):
-            # TODO add taxid or repid conversion here
             find_id = re.search(p, line)
             if find_id:
                 new_id = find_id.group(0).split("=")[-1]
