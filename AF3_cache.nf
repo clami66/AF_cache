@@ -10,6 +10,7 @@ params.bin_dir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad'
 params.af_dir = '/proj/beyondfold/apps/alphafold3'
 params.af_flagfile = '/proj/beyondfold/apps/alphafold3/multimer.flag'
 params.db_flagfile = '/proj/beyondfold/apps/alphafold3/databases.flag'
+params.parse_flagfile = '/proj/beyondfold/apps/alphafold3/parse_features.flag'
 params.use_env = false
 params.n_gpu = 8
 params.max_cpus = 64
@@ -104,7 +105,7 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.db_flagfile}
+    python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.parse_flagfile}
     """
 }
 

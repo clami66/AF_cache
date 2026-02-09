@@ -42,11 +42,11 @@ _HMMBUILD_BINARY_PATH = flags.DEFINE_string(
     shutil.which('hmmbuild'),
     'Path to the Hmmbuild binary.',
 )
-_JACKHMMER_BINARY_PATH = flags.DEFINE_string(
-    'jackhmmer_binary_path',
-    shutil.which('jackhmmer'),
-    'Path to the Jackhmmer binary.',
-)
+#_JACKHMMER_BINARY_PATH = flags.DEFINE_string(
+#    'jackhmmer_binary_path',
+#    shutil.which('jackhmmer'),
+#    'Path to the Jackhmmer binary.',
+#)
 # Template search configuration.
 _MAX_TEMPLATE_DATE = flags.DEFINE_string(
     'max_template_date',
@@ -101,7 +101,6 @@ def main(_):
     sequence_hash = hashlib.md5(str(target_sequence).encode()).hexdigest()
     out_json = os.path.join(FLAGS.json_cache, f"{sequence_hash}.json")
 
-    #try:
     template_hits = _get_protein_templates(
       sequence = target_sequence,
       input_msa_a3m = "".join(open(paired_msa_path, "r").readlines()),
@@ -127,9 +126,7 @@ def main(_):
           }
           for template in templates
       ]
-    #except:
-    #  templates = None
-    #  print("ERROR")
+
     chain_dict = {"protein": {"id": "A",
                               "sequence": str(target_sequence),
                               "unpairedMsaPath": str(unpaired_msa_path),
