@@ -142,7 +142,7 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         multimer_list = []
 
-    multimers = group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir=args.json_dir, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
+    multimers = group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir=args.json_dir, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions)
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
 

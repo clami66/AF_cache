@@ -123,7 +123,7 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         pairlist = []
 
-    binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output)
+    binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions)
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
     estimated_gpu_runtime = 0
