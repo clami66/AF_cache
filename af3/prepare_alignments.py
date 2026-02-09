@@ -11,7 +11,6 @@ from pathlib import Path
 from functools import partial
 from multiprocessing import Pool, TimeoutError
 from Bio import AlignIO
-import pandas as pd
 
 
 def convert_alignment(in_alignment, out_dir, custom_taxids=None, use_taxid=True):

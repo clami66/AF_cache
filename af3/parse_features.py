@@ -1,27 +1,17 @@
-# Copyright 2021 DeepMind Technologies Limited
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""Full AlphaFold protein structure prediction script."""
-import enum
 import json
 import os
 import pathlib
 import shutil
+import hashlib
+import datetime
 
 from absl import app
 from absl import flags
-from absl import logging
+from Bio import SeqIO
+
+from alphafold3.data.pipeline import _get_protein_templates
+from alphafold3.data import msa_config
+from alphafold3.common import folding_input
 
 flags.DEFINE_list(
     'fasta_paths', None, 'Paths to FASTA files, each containing a prediction '
@@ -32,11 +22,71 @@ flags.DEFINE_list(
 flags.DEFINE_string('json_cache', None, 'Path to a cache directory for monomer .pkl features')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
+DB_DIR = flags.DEFINE_string(
+    'db_dir',
+    'alphafold3_data/',
+    'Path to the directory containing the databases.',
+)
+_SEQRES_DATABASE_PATH = flags.DEFINE_string(
+    'seqres_database_path',
+    '${DB_DIR}/pdb_seqres_2022_09_28.fasta',
+    'PDB sequence database path, used for template search.',
+)
+_HMMSEARCH_BINARY_PATH = flags.DEFINE_string(
+    'hmmsearch_binary_path',
+    shutil.which('hmmsearch'),
+    'Path to the Hmmsearch binary.',
+)
+_HMMBUILD_BINARY_PATH = flags.DEFINE_string(
+    'hmmbuild_binary_path',
+    shutil.which('hmmbuild'),
+    'Path to the Hmmbuild binary.',
+)
+_JACKHMMER_BINARY_PATH = flags.DEFINE_string(
+    'jackhmmer_binary_path',
+    shutil.which('jackhmmer'),
+    'Path to the Jackhmmer binary.',
+)
+# Template search configuration.
+_MAX_TEMPLATE_DATE = flags.DEFINE_string(
+    'max_template_date',
+    '2021-09-30',  # By default, use the date from the AlphaFold 3 paper.
+    'Maximum template release date to consider. Format: YYYY-MM-DD. All '
+    'templates released after this date will be ignored.',
+)
+
 FLAGS = flags.FLAGS
 
-def parse_af3():
-  from Bio import SeqIO
-  import hashlib
+
+def main(_):
+
+  _templates_config = msa_config.TemplatesConfig(
+      template_tool_config=msa_config.TemplateToolConfig(
+          database_path=FLAGS.seqres_database_path,
+          chain_poly_type='polypeptide(L)',
+          hmmsearch_config=msa_config.HmmsearchConfig(
+              hmmsearch_binary_path=FLAGS.hmmsearch_binary_path,
+              hmmbuild_binary_path=FLAGS.hmmbuild_binary_path,
+              filter_f1=0.1,
+              filter_f2=0.1,
+              filter_f3=0.1,
+              e_value=100,
+              inc_e=100,
+              dom_e=100,
+              incdom_e=100,
+              alphabet='amino',
+          ),
+      ),
+      filter_config=msa_config.TemplateFilterConfig(
+          max_subsequence_ratio=0.95,
+          min_align_ratio=0.1,
+          min_hit_length=10,
+          deduplicate_sequences=True,
+          max_hits=4,
+          max_template_date=datetime.date.fromisoformat(FLAGS.max_template_date),
+      ),
+  )
+  print(f"{FLAGS.db_dir}/mmcif_files")
   fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
 
   for i, fasta_path in enumerate(FLAGS.fasta_paths):
@@ -48,15 +98,46 @@ def parse_af3():
 
     target_sequences_dict = []
     target_sequence = [record.seq for record in SeqIO.parse(fasta_path, "fasta")][0]
-    sequence_hash = hashlib.md5(target_sequence.encode()).hexdigest()
+    sequence_hash = hashlib.md5(str(target_sequence).encode()).hexdigest()
     out_json = os.path.join(FLAGS.json_cache, f"{sequence_hash}.json")
+
+    #try:
+    template_hits = _get_protein_templates(
+      sequence = target_sequence,
+      input_msa_a3m = "".join(open(paired_msa_path, "r").readlines()),
+      run_template_search = True,
+      templates_config = _templates_config,
+      pdb_database_path = f"{FLAGS.db_dir}/mmcif_files",
+      )
+
+    templates = [
+          folding_input.Template(
+              mmcif=struc.to_mmcif(),
+              query_to_template_map=hit.query_to_hit_mapping,
+          )
+          for hit, struc in template_hits.get_hits_with_structures()
+      ]
+    ser_templates = [
+          {
+              'mmcif': template.mmcif,
+              'queryIndices': list(template.query_to_template_map.keys()),
+              'templateIndices': (
+                  list(template.query_to_template_map.values()) or None
+              ),
+          }
+          for template in templates
+      ]
+    #except:
+    #  templates = None
+    #  print("ERROR")
     chain_dict = {"protein": {"id": "A",
                               "sequence": str(target_sequence),
                               "unpairedMsaPath": str(unpaired_msa_path),
                               "pairedMsaPath": str(paired_msa_path),
-                              "templates": None,
+                              "templates": ser_templates,
                               }}
     target_sequences_dict.append(chain_dict)
+
     json_data = {"name": "parse",
                  "modelSeeds": [1],
                  "sequences": target_sequences_dict,
@@ -65,11 +146,6 @@ def parse_af3():
                 }
     with open(out_json, "w") as out:
       json.dump(json_data, out, indent=4, sort_keys=True)
-  return out_json
-
-
-def main(argv):
-  parse_af3()
 
 
 if __name__ == '__main__':

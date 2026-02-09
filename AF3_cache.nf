@@ -104,7 +104,7 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/
+    python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.db_flagfile}
     """
 }
 
