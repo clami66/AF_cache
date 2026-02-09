@@ -104,7 +104,6 @@ flags.DEFINE_boolean('no_mgnify', False, 'Do not run/use mgnify alignments')
 flags.DEFINE_integer('redundancy_reduce_templates', 100, 'Percentage of redundancy reduction for template hits')
 flags.DEFINE_list('pad_to_size', [None, None], 'Pad input features to a given seq. length x MSA depth. '
                      'This is useful when processing multiple sequences at once to avoid re-compiling the models')
-flags.DEFINE_boolean('af3', False, 'Parse features into AF3 .json input files')
 
 FLAGS = flags.FLAGS
 
@@ -116,40 +115,6 @@ def _check_flag(flag_name: str,
     raise ValueError(f'{flag_name} must {verb} set when running with '
                      f'"--{other_flag_name}={FLAGS[other_flag_name].value}".')
 
-
-def parse_af3():
-  from Bio import SeqIO
-  import hashlib
-  fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
-
-  for i, fasta_path in enumerate(FLAGS.fasta_paths):
-    fasta_name = fasta_names[i]
-    output_dir = os.path.join(FLAGS.output_dir, fasta_name)
-    
-    msa_path = os.path.realpath(os.path.join(output_dir, "msa/A/mmseqs2_hits.a3m"))
-
-    target_sequences_dict = []
-    target_sequence = [record.seq for record in SeqIO.parse(fasta_path, "fasta")][0]
-    sequence_hash = hashlib.md5(target_sequence.encode()).hexdigest()
-    out_json = os.path.join(FLAGS.pickle_cache, f"{sequence_hash}.json")
-    chain_dict = {"protein": {"id": "A",
-                              "sequence": str(target_sequence),
-                              "unpairedMsaPath": str(msa_path),
-                              "pairedMsa": "",
-                              "templates": None,
-                              }}
-    target_sequences_dict.append(chain_dict)
-    json_data = {"name": "parse",
-                 "modelSeeds": 1,
-                 "sequences": target_sequences_dict,
-                 "dialect": "alphafold3",
-                 "version": 2,
-                }
-    with open(out_json, "w") as out:
-      json.dump(json_data, out, indent=4, sort_keys=True)
-  return out_json
-
-
 def main(argv):
   # delay imports
   from alphafold.data import pipeline
@@ -159,17 +124,11 @@ def main(argv):
   from alphafold.data.tools import hmmsearch
   from alphafold.model import config
 
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
-
-  if FLAGS.af3:
-    return parse_af3()
-
   for tool_name in (
       'jackhmmer', 'hhblits', 'hhsearch', 'hmmsearch', 'hmmbuild', 'kalign'):
     if not FLAGS[f'{tool_name}_binary_path'].value:
       raise ValueError(f'Could not find path to the "{tool_name}" binary. Make '
-                       'sure it is installed on your system.')
+                      'sure it is installed on your system.')
 
   use_small_bfd = FLAGS.db_preset == 'reduced_dbs'
   _check_flag('small_bfd_database_path', 'db_preset',
@@ -269,7 +228,7 @@ def main(argv):
     feature_dict = data_pipeline.process(
         input_fasta_path=fasta_path,
         msa_output_dir=msa_output_dir)
-    
+
 
 if __name__ == '__main__':
   flags.mark_flags_as_required([

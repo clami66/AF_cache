@@ -14,7 +14,6 @@ params.n_gpu = 8
 params.max_cpus = 64
 params.file_list = ''
 params.test = false
-params.af3 = false
 
 
 process split_fasta {
@@ -90,7 +89,6 @@ process convert_alignments {
     """
 }
 
-
 process parse_features {
     executor = 'local'
     publishDir {outputDir}, mode: 'copy'
@@ -103,13 +101,11 @@ process parse_features {
     path "pickle_cache/*.gz"
     
     script:
-    def af3 = params.af3 == true ? "--af3" : ''
     """
     mkdir -p pickle_cache
-    python ${params.af_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/ $af3
+    python ${params.af_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/
     """
 }
-
 
 process format_af_jobs {
     executor = 'local'
