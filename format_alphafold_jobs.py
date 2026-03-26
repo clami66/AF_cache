@@ -62,13 +62,11 @@ def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and lar
     return seqlen**2 * lam / 3600
 
 
-def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, other_args=""):
+def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, af_path="./", other_args=""):
     scripts_path = os.path.dirname(os.path.realpath(__file__))
-    #flagfile = f"{scripts_path}/multimer_all_vs_all.flag"
     pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
     pad_flag = f"--pad_to_size {pad_to_size}" if pad_to_size else ""
-    condaenv = "AF_cache" if pad_to_size else "af_server"
-    return f"python {os.path.abspath(__file__)}/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
+    return f"python {af_path}/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
 
 
 def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
@@ -146,7 +144,12 @@ def main(args, af_args):
                     command.write(get_slurm_profile(args.proj_id, max_len, str(log_file)))
                     command.write("\n")
                     command.write(f"conda activate {args.conda_env}\n")
-                    command.write(format_af_command([target[0] for target in target_chunk], out_dir, pickle_dir=args.pickle_dir, pad_to_size=pad_to_size, flagfile=args.flagfile, other_args=af_args))
+                    command.write(format_af_command([target[0] for target in target_chunk], out_dir,
+                                                    pickle_dir=args.pickle_dir,
+                                                    pad_to_size=pad_to_size,
+                                                    flagfile=args.flagfile,
+                                                    af_path=args.af_path,
+                                                    other_args=af_args))
                     command.write("\n")
 
     if args.estimate_gpu_runtime:
@@ -169,6 +172,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
     parser.add_argument("--estimate_gpu_runtime", action="store_true")
     parser.add_argument("--conda_env", default="AF_cache", help="Name or path for AlphaFold conda env")
+    parser.add_argument("--af_path", help="Path to AF2 installation")
 
     args, unknownargs = parser.parse_known_args()
 

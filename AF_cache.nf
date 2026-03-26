@@ -108,7 +108,11 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.af_cache_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} --pickle_dir ${outputDir}/pickle_cache --write_fastas --proj_id ${params.proj_id} $file_list
+    python ${params.af_cache_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} \\
+                                                            --pickle_dir ${outputDir}/pickle_cache \\
+                                                            --write_fastas --proj_id ${params.proj_id} \\
+                                                            --af_path ${params.af_cache_dir} \\
+                                                            $file_list
     """
 }
 
