@@ -7,7 +7,8 @@ params.proj_id = 'berzelius-2026-12'
 params.mmseqs_db = '/proj/common-datasets/LocalColabFold/'
 params.mmseqs_bin = '/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs'
 params.bin_dir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad'
-params.af_dir = '/proj/beyondfold/apps/alphafold3'
+//params.af_dir = '/proj/beyondfold/apps/alphafold3'
+params.af_dir = '/software/sse/manual/AlphaFold/3.0.1'
 params.af_flagfile = '/proj/beyondfold/apps/alphafold3/multimer.flag'
 params.db_flagfile = '/proj/beyondfold/apps/alphafold3/databases.flag'
 params.parse_flagfile = '/proj/beyondfold/apps/alphafold3/parse_features.flag'
@@ -105,7 +106,7 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.parse_flagfile}
+    conda run -p ${params.conda_env} python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.parse_flagfile}
     """
 }
 
@@ -124,7 +125,7 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.bin_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} --json_dir ${outputDir}/json_cache --proj_id ${params.proj_id} --af3_path ${params.af_dir} $file_list --flagfiles ${params.af_flagfile} ${params.db_flagfile}
+    python ${params.bin_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ --json_dir ${outputDir}/json_cache --proj_id ${params.proj_id} --af3_path ${params.af_dir} $file_list --flagfiles ${params.af_flagfile} ${params.db_flagfile}
     """
 }
 
