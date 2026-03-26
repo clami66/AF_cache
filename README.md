@@ -61,18 +61,18 @@ $ cat fasta_seqs/*.fasta > all_seqs.fasta
 
 ```
 # -resume avoids re-running completed steps if the job crashed
-$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6
+$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id
 ```
 
-To restrict the interactions to a list of `prot1_prot2` pairs, pass the absolute path to the list `multimers_list`:
+To restrict the interactions to a list of `prot1 prot2` pairs, pass the absolute path to the list `multimers_list`:
 
 ```
 $ head multimers_list 
-YP00901869113_YP00901869113
-YP00901869012_YP00901869012
+YP00901869113 YP00901869113
+YP00901869012 YP00901869012
 ...
 
-$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id berzelius-2025-6 --file_list $(realpath multimers_list)
+$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id --file_list $(realpath multimers_list)
 ```
 
 ## Running alignments and other steps separately
@@ -81,21 +81,17 @@ $ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id b
 
 GPU:
 ```
-conda activate /proj/beyondfold/apps/.conda/envs/AF_cache
-mmseqs_db=/proj/beyondfold/apps/colabfold_databases/gpu/
-mmseqs_bin=/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs
+conda activate AF_cache
+mmseqs_db=/path/to/mmseqs_db
+mmseqs_bin=/path/to/mmseqs
 
 # 128 cpus for 4 GPUs on berzelius, 256 for 8 GPUs etc
-$ python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir// --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
+$ python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
 ```
 
 CPU (not recommended):
 ```
-conda activate /proj/beyondfold/apps/.conda/envs/AF_cache
-mmseqs_db=/proj/beyondfold/apps/colabfold_databases/cpu/
-mmseqs_bin=/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs
-
-$ python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 32
+python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 32
 ```
 
 
