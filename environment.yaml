@@ -1,4 +1,4 @@
-name: AF_unmasked
+name: AF_cache
 channels:
   - conda-forge
   - bioconda
