@@ -1,23 +1,6 @@
 #!/usr/bin/env nextflow
 
-outputDir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/outputs'
-params.conda_env = '/proj/beyondfold/apps/.conda/envs/af3'
-params.executor = 'slurm'
-params.proj_id = 'berzelius-2026-12'
-params.mmseqs_db = '/proj/common-datasets/LocalColabFold/'
-params.mmseqs_bin = '/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs'
-params.bin_dir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad'
-//params.af_dir = '/proj/beyondfold/apps/alphafold3'
-params.af_dir = '/software/sse/manual/AlphaFold/3.0.1'
-params.af_flagfile = '/proj/beyondfold/apps/alphafold3/multimer.flag'
-params.db_flagfile = '/proj/beyondfold/apps/alphafold3/databases.flag'
-params.parse_flagfile = '/proj/beyondfold/apps/alphafold3/parse_features.flag'
-params.use_env = false
-params.n_gpu = 8
-params.max_cpus = 64
-params.file_list = ''
-params.test = false
-
+outputDir = 'outputs'
 
 process split_fasta {
     executor = 'local'
@@ -32,7 +15,7 @@ process split_fasta {
     script:
     """
     mkdir -p split_fasta/
-    python ${params.bin_dir}/split_fasta.py $fasta split_fasta/
+    python ${params.af_cache_dir}/split_fasta.py $fasta split_fasta/
     """
 }
 
@@ -71,7 +54,7 @@ process mmseqs_align {
         mkdir -p alignments
         cp /proj/beyondfold/apps/alphafoldv2.3.1_pad/alignment_examples/*.a3m alignments/
     else
-        python ${params.bin_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
+        python ${params.af_cache_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
     fi
     """
 }
@@ -88,7 +71,7 @@ process convert_alignments {
 
     script:
     """
-    python ${params.bin_dir}/af3/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/af3/prepare_alignments.py $alignments AF_data/
     """
 }
 
@@ -106,7 +89,7 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    conda run -p ${params.conda_env} python ${params.bin_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.parse_flagfile}
+    conda run -p ${params.af3_conda_env} python ${params.af_cache_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.af3_parse_flagfile}
     """
 }
 
@@ -125,7 +108,7 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.bin_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ --json_dir ${outputDir}/json_cache --proj_id ${params.proj_id} --af3_path ${params.af_dir} $file_list --flagfiles ${params.af_flagfile} ${params.db_flagfile}
+    python ${params.af_cache_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ --json_dir ${outputDir}/json_cache --proj_id ${params.proj_id} --af3_path ${params.af3_dir} $file_list --flagfiles ${params.af3_flagfile} ${params.af3_db_flagfile}
     """
 }
 

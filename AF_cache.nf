@@ -1,20 +1,6 @@
 #!/usr/bin/env nextflow
 
-outputDir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/outputs'
-params.conda_env = '/proj/beyondfold/apps/.conda/envs/AF_cache'
-params.executor = 'slurm'
-params.proj_id = 'berzelius-2024-439'
-params.mmseqs_db = '/proj/common-datasets/LocalColabFold/'
-params.mmseqs_bin = '/proj/beyondfold/apps/MMseqs2/build/bin/mmseqs'
-params.af_dir = '/proj/beyondfold/apps/alphafoldv2.3.1_pad'
-params.af_flagfile = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/multimer_full_dbs_v3.flag'
-params.db_flagfile = '/proj/beyondfold/apps/alphafoldv2.3.1_pad/databases.flag'
-params.use_env = false
-params.n_gpu = 8
-params.max_cpus = 64
-params.file_list = ''
-params.test = false
-
+outputDir = 'outputs/'
 
 process split_fasta {
     executor = 'local'
@@ -29,7 +15,7 @@ process split_fasta {
     script:
     """
     mkdir -p split_fasta/
-    python ${params.af_dir}/split_fasta.py $fasta split_fasta/
+    python ${params.af_cache_dir}/split_fasta.py $fasta split_fasta/
     """
 }
 
@@ -68,7 +54,7 @@ process mmseqs_align {
         mkdir -p alignments
         cp /proj/beyondfold/apps/alphafoldv2.3.1_pad/alignment_examples/*.a3m alignments/
     else
-        python ${params.af_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
+        python ${params.af_cache_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
     fi
     """
 }
@@ -85,7 +71,7 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_dir}/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/prepare_alignments.py $alignments AF_data/
     """
 }
 
@@ -103,7 +89,7 @@ process parse_features {
     script:
     """
     mkdir -p pickle_cache
-    python ${params.af_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/
+    python ${params.af_cache_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/
     """
 }
 
@@ -122,7 +108,7 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.af_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} --pickle_dir ${outputDir}/pickle_cache --write_fastas --proj_id ${params.proj_id} $file_list
+    python ${params.af_cache_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} --pickle_dir ${outputDir}/pickle_cache --write_fastas --proj_id ${params.proj_id} $file_list
     """
 }
 
