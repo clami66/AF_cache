@@ -14,6 +14,8 @@ If you don't wish to use a Docker image, the installation and setup procedure is
 # clone this repository
 git clone https://github.com/clami66/AF_cache.git
 cd AF_cache/
+# export the following to make sure that the default pipeline config settings are correct
+export AF_CACHE=$(pwd)
 
 # install requirements with mamba/conda
 mamba env create --file=environment.yaml
@@ -44,11 +46,41 @@ GPU=1 ./setup_databases.sh database/
 
 ## Nextflow PPI pipeline (recommended)
 
+### Configuring the pipeline
+
+Most configuration is done in `nextflow.config`. Here, one can set up the installation paths of AF_cache, the ColabFold DBs, MMseqs2.
+
+If the installation instructions were followed exactly, there is no need to change these:
+
+```
+conda_env = 'AF_cache'
+af_cache_dir = '$AF_CACHE'
+mmseqs_db = '$AF_CACHE/database/'
+mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
+```
+
+If the DBs and MMseqs2 were installed in some other location, the parameters need to be adjusted accordingly.
+
+Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold3 if the user would like to run `AF3_cache.nf` instead.
+
+```
+// af2 parameters
+af_flagfile = '$AF_CACHE/flags/multimer.flag'    // flagfile with default AF2.3 inference parameters
+db_flagfile = '$AF_CACHE/flags/databases.flag'   // flagfile with DB paths for AF2.3. Might have to be adjusted to point to DB location
+
+// af3 parameters
+af3_conda_env = 'your_AF3_conda_environment'
+af3_dir = '/path/to/your/af3/installation/'
+```
+
+**NB:** the flagfiles (`af_flagfile`, `db_flagfile`, etc.) are a convenient place to set all the necessary flags to run AlphaFold. In this repo, we have a set of predefined flagfiles (inside `flags/`). These need to be adjusted, for example, so that AF can find the model parameters and the ColabFold databases. It is important to make sure that the information in the flagfiles are correct.
+
+### Running the pipeline
+
 1. Activate conda env:
 
 ```
 conda activate AF_cache
-export AF_CACHE=$(pwd)
 ```
 
 2. Concatenate all fasta sequences into a single file. This is necessary only to run MMseqs2
@@ -75,7 +107,7 @@ YP00901869012 YP00901869012
 $ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id --file_list $(realpath multimers_list)
 ```
 
-## Running alignments and other steps separately
+## Running alignments and other steps separately (not recommended)
 
 1. Run alignments with MMseqs2
 
