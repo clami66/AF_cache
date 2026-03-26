@@ -1,13 +1,35 @@
 # Efficiently run all-vs-all dimer predictions with AF_cache and mmseqs2
 
+## Installing AF_cache
+
+### Stand-alone installation
+
+If you don't wish to use a Docker image, the installation and setup procedure is as follows:
+
+1. [Install Miniforge](https://github.com/conda-forge/miniforge?tab=readme-ov-file#unix-like-platforms-macos-linux--wsl)
+
+2. Set up conda environment, install dependencies:
+
+```bash
+# clone this repository
+git clone https://github.com/clami66/AF_cache.git
+cd AF_cache/
+
+# install requirements with mamba/conda
+mamba env create --file=environment.yaml
+mamba activate AF_cache
+
+# install python requirements
+python -m pip install -r requirements.txt
+```
+
 ## Nextflow PPI pipeline
 
 1. Activate conda env:
 
 ```
-module load Mambaforge/23.3.1-1-hpc1-bdist
-conda activate /proj/beyondfold/apps/.conda/envs/AF_cache
-export AF_CACHE=/proj/beyondfold/apps/alphafoldv2.3.1_pad
+conda activate AF_cache
+export AF_CACHE=$(pwd)
 ```
 
 2. Concatenate all fasta sequences into a single file. This is necessary only to run MMseqs2
