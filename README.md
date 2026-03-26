@@ -22,8 +22,27 @@ mamba activate AF_cache
 # install python requirements
 python -m pip install -r requirements.txt
 ```
+3. Download and setup MMseqs2 (more detailed instructions [here](https://github.com/soedinglab/mmseqs2))
+```bash
+# GPU version:
+wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
 
-## Nextflow PPI pipeline
+# Non-GPU version:
+# wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+```
+
+5. Download and setup ColabFold DBs (instructions taken [here](https://colabfold.mmseqs.com/))
+
+```bash
+wget https://raw.githubusercontent.com/sokrypton/ColabFold/main/setup_databases.sh
+chmod +x setup_databases.sh
+# If you want to use GPU acceleration during the searches:
+GPU=1 ./setup_databases.sh database/
+# If you DO NOT want to use GPU acceleration during the searches:
+# ./setup_databases.sh database/
+```
+
+## Nextflow PPI pipeline (recommended)
 
 1. Activate conda env:
 
