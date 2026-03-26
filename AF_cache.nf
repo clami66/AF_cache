@@ -37,7 +37,7 @@ process ln_fasta {
 
 process mmseqs_align {
     executor = "${params.executor}"
-    clusterOptions "-A ${params.proj_id} -t 8:00:00 --gpus ${params.n_gpu}"
+    clusterOptions "-A ${params.proj_id} -t ${params.walltime} --gpus ${params.n_gpu}"
     publishDir {outputDir}
     
     input:
@@ -114,7 +114,7 @@ process format_af_jobs {
 
 process run_af_jobs {
     executor = "${params.executor}"
-    clusterOptions "-A ${params.proj_id} -t 3-0 --gpus 1"
+    clusterOptions "-A ${params.proj_id} -t ${params.walltime} --gpus 1"
     publishDir {outputDir}
     
     input:
