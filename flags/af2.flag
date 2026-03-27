@@ -1,9 +1,12 @@
---mmseqs2_binary_path=/proj/beyondfold/apps/alphafoldv2.3.1_pad/mmseqs/bin/mmseqs
---mmseqs2_uniref_database_path=/proj/beyondfold/apps/alphafoldv2.3.1_pad/database/uniref30_2302_db
---mmseqs2_env_database_path=/proj/beyondfold/apps/alphafoldv2.3.1_pad/database/colabfold_envdb_202108_db
+--data_dir=/proj/beyondfold/apps/alphafold_data
+--use_gpu_relax=True
+--models_to_relax=NONE
+--models_to_use=model_1_multimer_v3
+--num_multimer_predictions_per_model=1
+--max_recycles=20
 --redundancy_reduce_templates=99
---model_preset=multimer
 --db_preset=full_dbs
+--model_preset=multimer
 --use_precomputed_msas
 --max_template_date=2024-05-01
 --template_mmcif_dir=/proj/beyondfold/apps/alphafold_data/pdb_mmcif/mmcif_files
