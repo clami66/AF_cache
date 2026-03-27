@@ -36,7 +36,7 @@ process parse_features {
     # make sure that the custom installation of AF2.3 is found first
     export PYTHONPATH="${params.af_cache_dir}:$PYTHONPATH"
     mkdir -p pickle_cache
-    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af_flagfile} \\
+    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af2_flagfile} \\
                                                                  --output_dir $af_data \\
                                                                  --fasta_paths $fasta \\
                                                                  --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
@@ -69,7 +69,7 @@ process format_af_jobs {
                                                                         --af_path ${params.af_cache_dir} \\
                                                                         --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
                                                                         --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
-                                                                        --flagfile ${params.af_flagfile} \\
+                                                                        --flagfile ${params.af2_flagfile} \\
                                                                         $file_list
     """
 }
