@@ -80,6 +80,7 @@ flags.DEFINE_string('mmseqs2_uniref_database_path', None, 'Path to the Uniref30 
                     'database for use by MMseqs2.')
 flags.DEFINE_string('mmseqs2_env_database_path', None, 'Path to the environmental '
                     'database for use by MMseqs2.')
+flags.DEFINE_boolean('mmseqs2_gpu', False, 'Use GPU version of mmseqs2')
 flags.DEFINE_string('uniref90_database_path', None, 'Path to the Uniref90 '
                     'database for use by JackHMMER.')
 flags.DEFINE_string('mgnify_database_path', None, 'Path to the MGnify '
@@ -548,7 +549,8 @@ def main(argv):
       bfd_max_hits=FLAGS.bfd_max_hits,
       alignments_only=FLAGS.alignments_only,
       no_uniref=FLAGS.no_uniref,
-      no_mgnify=FLAGS.no_mgnify,)
+      no_mgnify=FLAGS.no_mgnify,
+      mmseqs2_gpu=FLAGS.mmseqs2_gpu)
 
   if run_multimer_system:
     num_predictions_per_model = FLAGS.num_multimer_predictions_per_model
@@ -590,8 +592,6 @@ if __name__ == '__main__':
       'fasta_paths',
       'output_dir',
       'data_dir',
-      'uniref90_database_path',
-      'mgnify_database_path',
       'template_mmcif_dir',
       'max_template_date',
       'obsolete_pdbs_path',

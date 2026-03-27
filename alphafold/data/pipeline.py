@@ -136,7 +136,8 @@ class DataPipeline:
                use_precomputed_msas: bool = False,
                alignments_only: bool = False,
                no_mgnify: bool = False,
-               no_uniref: bool = False,):
+               no_uniref: bool = False,
+               mmseqs2_gpu: bool = False):
     """Initializes the data pipeline."""
     self._use_small_bfd = use_small_bfd
 
@@ -145,7 +146,7 @@ class DataPipeline:
           binary_path=mmseqs2_binary_path,
           uniref_db=mmseqs2_uniref_database_path,
           metagenomic_db=mmseqs2_env_database_path,
-          gpu = ("gpu" in mmseqs2_uniref_database_path),
+          gpu=mmseqs2_gpu,
           )
     else:
       self.mmseqs2_runner = None
