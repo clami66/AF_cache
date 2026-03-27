@@ -9,15 +9,9 @@ from itertools import combinations_with_replacement, combinations, product
 
 from Bio import SeqIO
 
-def get_slurm_profile(proj_id, max_len, log_path):
+def bash_header():
 
     return f"""#!/bin/bash
-#SBATCH -A {proj_id}
-#SBATCH --gpus 1
-#SBATCH -t 3-00:00:00
-#SBATCH -C {'thin' if max_len != inf else 'fat'}
-#SBATCH -o {log_path}
-
 export TF_FORCE_UNIFIED_MEMORY='1'
 export XLA_PYTHON_CLIENT_MEM_FRACTION='6.0'
 
@@ -141,7 +135,7 @@ def main(args, af_args):
                 command_file = Path(out_dir, "sbatch_scripts", f"{max_len}_{chunk_n}.sh")
                 log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
                 with open(command_file, "w") as command:
-                    command.write(get_slurm_profile(args.proj_id, max_len, str(log_file)))
+                    command.write(bash_header())
                     command.write("\n")
                     command.write(f"conda activate {args.conda_env}\n")
                     command.write(format_af_command([target[0] for target in target_chunk], out_dir,
@@ -165,7 +159,6 @@ if __name__ == '__main__':
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
     parser.add_argument("--flagfile", help = "Flagfile with parameters to AF", default=f"/proj/beyondfold/users/x_clami/mmseqs_benchmark/scripts/multimer_all_vs_all.flag")
     parser.add_argument("--pickle_dir", default="", help="Path to directory containing pickled features for all monomers in set")
-    parser.add_argument("--proj_id", default="berzelius-xxxx-yyyy", help="SLURM project ID")
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[400, 800, 1000, 1200, 1400, 1600, 4500], help="Boundaries (sum of sequences length) to group multiple inference jobs")

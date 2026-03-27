@@ -3,7 +3,8 @@
 outputDir = 'outputs/'
 
 process split_fasta {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -20,7 +21,8 @@ process split_fasta {
 }
 
 process ln_fasta {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -36,8 +38,8 @@ process ln_fasta {
 }
 
 process mmseqs_align {
-    executor = "${params.executor}"
-    clusterOptions "-A ${params.proj_id} -t ${params.walltime} --gpus ${params.n_gpu}"
+    executor = "${params.mmseqs_executor}"
+    clusterOptions "${params.mmseqs_executor_flags}"
     publishDir {outputDir}
     
     input:
@@ -60,7 +62,8 @@ process mmseqs_align {
 }
 
 process convert_alignments {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -76,7 +79,8 @@ process convert_alignments {
 }
 
 process parse_features {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}, mode: 'copy'
     
     input:
@@ -94,7 +98,8 @@ process parse_features {
 }
 
 process format_af_jobs {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -110,15 +115,15 @@ process format_af_jobs {
     """
     python ${params.af_cache_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} \\
                                                             --pickle_dir ${outputDir}/pickle_cache \\
-                                                            --write_fastas --proj_id ${params.proj_id} \\
+                                                            --write_fastas \\
                                                             --af_path ${params.af_cache_dir} \\
                                                             $file_list
     """
 }
 
 process run_af_jobs {
-    executor = "${params.executor}"
-    clusterOptions "-A ${params.proj_id} -t ${params.walltime} --gpus 1"
+    executor = "${params.af_executor}"
+    clusterOptions "${params.af_executor_flags}"
     publishDir {outputDir}
     
     input:

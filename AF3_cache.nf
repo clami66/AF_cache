@@ -3,7 +3,8 @@
 outputDir = 'outputs'
 
 process split_fasta {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -20,7 +21,8 @@ process split_fasta {
 }
 
 process ln_fasta {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -36,7 +38,7 @@ process ln_fasta {
 }
 
 process mmseqs_align {
-    executor = "${params.executor}"
+    executor = "${params.mmseqs_executor}"
     clusterOptions "-A ${params.proj_id} -t 2:00:00 --gpus ${params.n_gpu} --reservation=devel"
     publishDir {outputDir}
     
@@ -60,7 +62,8 @@ process mmseqs_align {
 }
 
 process convert_alignments {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -76,7 +79,8 @@ process convert_alignments {
 }
 
 process parse_features {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}, mode: 'copy'
     
     input:
@@ -94,7 +98,8 @@ process parse_features {
 }
 
 process format_af_jobs {
-    executor = 'local'
+    executor = "${params.other_executor}"
+    clusterOptions = "${params.other_executor_flags}"
     publishDir {outputDir}
 
     input:
@@ -108,12 +113,16 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.af_cache_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ --json_dir ${outputDir}/json_cache --proj_id ${params.proj_id} --af3_path ${params.af3_dir} $file_list --flagfiles ${params.af3_flagfile} ${params.af3_db_flagfile}
+    python ${params.af_cache_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
+                                                                --json_dir ${outputDir}/json_cache \\
+                                                                --af3_path ${params.af3_dir} $file_list \\
+                                                                --flagfiles ${params.af3_flagfile} \\
+                                                                ${params.af3_db_flagfile}
     """
 }
 
 process run_af_jobs {
-    executor = "${params.executor}"
+    executor = "${params.af_executor}"
     clusterOptions "-A ${params.proj_id} -t 3-0 --gpus 1"
     publishDir {outputDir}
     

@@ -13,15 +13,9 @@ from Bio import SeqIO
 from string import ascii_uppercase, ascii_lowercase
 ascii_upperlower = ascii_uppercase + ascii_lowercase
 
-def get_slurm_profile(proj_id, max_len, log_path):
+def bash_header():
 
     return f"""#!/bin/bash
-#SBATCH -A {proj_id}
-#SBATCH --gpus 1
-#SBATCH -t 3-00:00:00
-#SBATCH -C {'thin' if max_len != inf else 'fat'}
-#SBATCH -o {log_path}
-
 module load Mambaforge/23.3.1-1-hpc1-bdist
 """
 
@@ -165,7 +159,7 @@ def main(args, af_args):
             command_file = Path(out_dir, "sbatch_scripts", f"{max_len}_{chunk_n}.sh")
             log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
             with open(command_file, "w") as command:
-                command.write(get_slurm_profile(args.proj_id, max_len, str(log_file)))
+                command.write(bash_header())
                 command.write("\n")
                 command.write(f"conda activate {args.conda_env}\n")
                 command.write(format_af_command(str(input_json_dir), f"{out_dir}/{max_len}_{chunk_n}", flagfiles=args.flagfiles, af3_path=args.af3_path, other_args=af_args))
@@ -183,7 +177,6 @@ if __name__ == '__main__':
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
     parser.add_argument("--both_directions", action="store_true", default=False, help="Run AB as well as BA")
     parser.add_argument("--json_dir", default="", help="Path to directory containing json features for all monomers in set")
-    parser.add_argument("--proj_id", default="berzelius-xxxx-yyyy", help="SLURM project ID")
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[256, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 3584, 4096, 4608, 5120], help="Bucket boundaries to group multiple inference jobs")

@@ -50,16 +50,21 @@ GPU=1 ./setup_databases.sh database/
 
 Most configuration is done in `nextflow.config`. Here, one can set up the installation paths of AF_cache, the ColabFold DBs, MMseqs2.
 
+#### Installation paths
+
 If the installation instructions were followed exactly, there is no need to change these:
 
 ```
 conda_env = 'AF_cache'
+# necessary to export AF_CACHE install path
 af_cache_dir = '$AF_CACHE'
 mmseqs_db = '$AF_CACHE/database/'
 mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
 ```
 
 If the DBs and MMseqs2 were installed in some other location, the parameters need to be adjusted accordingly.
+
+#### AlphaFold parameters
 
 Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold3 if the user would like to run `AF3_cache.nf` instead.
 
@@ -74,6 +79,25 @@ af3_dir = '/path/to/your/af3/installation/'
 ```
 
 **NB:** the flagfiles (`af_flagfile`, `db_flagfile`, etc.) are a convenient place to set all the necessary flags to run AlphaFold. In this repo, we have a set of predefined flagfiles (inside `flags/`). These need to be adjusted, for example, so that AF can find the model parameters and the ColabFold databases. It is important to make sure that the information in the flagfiles are correct.
+
+#### Scheduling and resource management
+
+Depending whether the pipeline runs on an HPC sytem or locally, these parameters can be varied to send jobs to different queues or running them locally.
+
+For example, if running on a SLURM-based system one could send the alignment to a node with 8 GPUs and AF inference jobs to nodes with a single GPU while running lighter tasks (e.g. parsing features, copying files) locally (on the front node). That would be accomplished with the following:
+
+```
+mmseqs_executor = 'slurm'
+mmseqs_executor_flags = '--account your-account-ID --gpus 8 --time 12:00:00'
+
+af_executor = 'slurm'
+af_executor_flags = '--account your-account-ID --gpus 1 --time 12:00:00'
+
+other_executor = 'local'
+other_executor_flags = ''
+```
+
+Consult the Nextlow docs to set up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
 
 ### Running the pipeline
 
