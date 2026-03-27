@@ -29,16 +29,19 @@ process parse_features {
     path af_data
     
     output:
-    path "pickle_cache/*.gz"
+    path "pickle_cache/**.pkl.gz", emit: pkl
     
     script:
     """
     # make sure that the custom installation of AF2.3 is found first
     export PYTHONPATH="${params.af_cache_dir}:$PYTHONPATH"
     mkdir -p pickle_cache
-    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.db_flagfile} \\
+    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af_flagfile} \\
                                                                  --output_dir $af_data \\
                                                                  --fasta_paths $fasta \\
+                                                                 --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
+                                                                 --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
+                                                                 --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
                                                                  --pickle_cache pickle_cache/
     """
 }
@@ -61,10 +64,26 @@ process format_af_jobs {
     """
     python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
                                                                         --conda_env ${params.conda_env} \\
-                                                                        --pickle_dir ${params.output_dir}/pickle_cache \\
+                                                                        --pickle_dir $pickle_cache \\
                                                                         --write_fastas \\
                                                                         --af_path ${params.af_cache_dir} \\
+                                                                        --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
+                                                                        --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
+                                                                        --flagfile ${params.af_flagfile} \\
                                                                         $file_list
+    """
+}
+
+process collect_pickles {
+    input:
+    path "pickle_cache/*"
+
+    output:
+    path "pickle_cache"
+
+    script:
+    """
+    echo "directory ready"
     """
 }
 
@@ -75,9 +94,10 @@ workflow {
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    pickle_cache = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect().flatten().take(1)
+    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).pkl.collect()
+    pickle_cache = collect_pickles(pickles)
     
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache).sh.collect().flatten()
-    run_af_jobs(sbatch_scripts)
+    run_af_jobs(sbatch_scripts, pickle_cache)
 }

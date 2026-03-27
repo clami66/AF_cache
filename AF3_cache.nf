@@ -34,7 +34,11 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    conda run -p ${params.af3_conda_env} python ${params.af_cache_dir}/af3/parse_features.py --output_dir $af_data --fasta_paths $fasta --json_cache json_cache/ --flagfile ${params.af3_parse_flagfile}
+    conda run -p ${params.af3_conda_env} python ${params.af_cache_dir}/af3/parse_features.py \\
+                                                --output_dir $af_data \\
+                                                --fasta_paths $fasta \\
+                                                --json_cache json_cache/ \\
+                                                --flagfile ${params.af3_parse_flagfile}
     """
 }
 
@@ -62,6 +66,18 @@ process format_af_jobs {
     """
 }
 
+process collect_jsons {
+    input:
+    path "json_cache/*"
+
+    output:
+    path "json_cache"
+
+    script:
+    """
+    echo "directory ready"
+    """
+}
 
 workflow {
     // align
@@ -70,8 +86,9 @@ workflow {
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    json_cache = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect().flatten().take(1)
-    
+    jsons = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect()
+    json_cache = collect_jsons(jsons)
+
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, json_cache).sh.collect().flatten()
     run_af_jobs(sbatch_scripts)
