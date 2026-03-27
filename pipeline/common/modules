@@ -36,7 +36,7 @@ process ln_fasta {
 
 process mmseqs_align {
     executor = "${params.mmseqs_executor}"
-    clusterOptions "-A ${params.proj_id} -t 2:00:00 --gpus ${params.n_gpu} --reservation=devel"
+    clusterOptions "${params.mmseqs_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
     
     input:
@@ -67,16 +67,18 @@ process mmseqs_align {
 
 process run_af_jobs {
     executor = "${params.af_executor}"
-    clusterOptions "-A ${params.proj_id} -t 3-0 --gpus 1"
+    clusterOptions "${params.af_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
     
     input:
     path sbatch_script
+    path cache
     
     script:
     """
     if ${params.test}; then
-        echo "Launching $sbatch_script"
+        #echo "Launching $sbatch_script"
+        sh $sbatch_script
     else
         sh $sbatch_script
     fi
