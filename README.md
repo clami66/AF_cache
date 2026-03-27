@@ -33,7 +33,7 @@ wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gp
 # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
 ```
 
-5. Download and setup ColabFold DBs (instructions taken [here](https://colabfold.mmseqs.com/))
+4. Download and setup ColabFold DBs (instructions taken [here](https://colabfold.mmseqs.com/))
 
 ```bash
 wget https://raw.githubusercontent.com/sokrypton/ColabFold/main/setup_databases.sh
@@ -42,6 +42,13 @@ chmod +x setup_databases.sh
 GPU=1 ./setup_databases.sh database/
 # If you DO NOT want to use GPU acceleration during the searches:
 # ./setup_databases.sh database/
+```
+
+5. Test the pipeline
+
+```
+# --test skips the alignment step
+nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --test -resume
 ```
 
 ## Nextflow PPI pipeline (recommended)
