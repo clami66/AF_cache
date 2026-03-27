@@ -157,7 +157,7 @@ if __name__ == '__main__':
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
     parser.add_argument("--both_directions", action="store_true", default=False, help="Run AB as well as BA")
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
-    parser.add_argument("--flagfile", help = "Flagfile with parameters to AF", default=f"/proj/beyondfold/users/x_clami/mmseqs_benchmark/scripts/multimer_all_vs_all.flag")
+    parser.add_argument("--flagfile", help = "Flagfile with parameters to AF", default=None)
     parser.add_argument("--pickle_dir", default="", help="Path to directory containing pickled features for all monomers in set")
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
