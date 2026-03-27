@@ -478,20 +478,7 @@ def main(argv):
                        'sure it is installed on your system.')
 
   use_small_bfd = FLAGS.db_preset == 'reduced_dbs'
-  _check_flag('small_bfd_database_path', 'db_preset',
-              should_be_set=use_small_bfd)
-  _check_flag('bfd_database_path', 'db_preset',
-              should_be_set=not use_small_bfd)
-  _check_flag('uniref30_database_path', 'db_preset',
-              should_be_set=not use_small_bfd)
-
   run_multimer_system = 'multimer' in FLAGS.model_preset
-  _check_flag('pdb70_database_path', 'model_preset',
-              should_be_set=not run_multimer_system)
-  _check_flag('pdb_seqres_database_path', 'model_preset',
-              should_be_set=run_multimer_system)
-  _check_flag('uniprot_database_path', 'model_preset',
-              should_be_set=run_multimer_system)
 
   if FLAGS.model_preset == 'monomer_casp14':
     num_ensemble = 8

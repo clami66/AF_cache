@@ -220,15 +220,18 @@ class DataPipeline:
       use_precomputed_msas: Whether to use pre-existing MSAs; see run_alphafold.
     """
     self._monomer_data_pipeline = monomer_data_pipeline
-    self._uniprot_msa_runner = jackhmmer.Jackhmmer(
-        binary_path=jackhmmer_binary_path,
-        database_path=uniprot_database_path)
+    self.use_mmseqs2_align = use_mmseqs2_align
+    if self.use_mmseqs2_align:
+      self._uniprot_msa_runner = None
+    else:
+      self._uniprot_msa_runner = jackhmmer.Jackhmmer(
+          binary_path=jackhmmer_binary_path,
+          database_path=uniprot_database_path)
     self._max_uniprot_hits = max_uniprot_hits
     self.use_precomputed_msas = use_precomputed_msas
     self.separate_homomer_msas = separate_homomer_msas
     self.feat_config = feat_config
     self.pad_length = pad_length
-    self.use_mmseqs2_align = use_mmseqs2_align
     self.pickle_cache = pickle_cache
 
   def _process_single_chain(

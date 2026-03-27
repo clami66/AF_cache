@@ -69,6 +69,7 @@ process format_af_jobs {
                                                                         --af_path ${params.af_cache_dir} \\
                                                                         --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
                                                                         --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
+                                                                        --mmseqs2_binary_path ${params.mmseqs_bin} \\
                                                                         --flagfile ${params.af2_flagfile} \\
                                                                         $file_list
     """
