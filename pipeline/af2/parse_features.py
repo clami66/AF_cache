@@ -47,8 +47,8 @@ flags.DEFINE_string('hmmbuild_binary_path', shutil.which('hmmbuild'),
                     'Path to the hmmbuild executable.')
 flags.DEFINE_string('kalign_binary_path', shutil.which('kalign'),
                     'Path to the Kalign executable.')
-flags.DEFINE_string('mmseqs2_binary_path', None,
-                    'Path to the MMseqs2 executable (GPU version).')
+flags.DEFINE_string('mmseqs2_binary_path', shutil.which('mmseqs'),
+                    'Path to the MMseqs2 executable.')
 flags.DEFINE_string('mmseqs2_uniref_database_path', None, 'Path to the Uniref30 '
                     'database for use by MMseqs2.')
 flags.DEFINE_string('mmseqs2_env_database_path', None, 'Path to the environmental '
@@ -99,8 +99,6 @@ flags.DEFINE_integer('mgnify_max_hits', 500, 'Max hits in uniprot MSA')
 flags.DEFINE_integer('uniref_max_hits', 10000, 'Max hits in uniprot MSA')
 flags.DEFINE_integer('bfd_max_hits', 10000, 'Max hits in uniprot MSA')
 flags.DEFINE_boolean('separate_homomer_msas', False, 'Whether to force separate processing of homomer MSAs')
-flags.DEFINE_boolean('no_uniref', False, 'Do not run/use Uniref90 alignments')
-flags.DEFINE_boolean('no_mgnify', False, 'Do not run/use mgnify alignments')
 flags.DEFINE_integer('redundancy_reduce_templates', 100, 'Percentage of redundancy reduction for template hits')
 flags.DEFINE_list('pad_to_size', [None, None], 'Pad input features to a given seq. length x MSA depth. '
                      'This is useful when processing multiple sequences at once to avoid re-compiling the models')
@@ -196,15 +194,15 @@ def main(argv):
       uniref_max_hits=FLAGS.uniref_max_hits,
       bfd_max_hits=FLAGS.bfd_max_hits,
       alignments_only=True,
-      no_uniref=FLAGS.no_uniref,
-      no_mgnify=FLAGS.no_mgnify)
+      no_uniref=True,
+      no_mgnify=True)
 
   if run_multimer_system:
     data_pipeline = pipeline_multimer.DataPipeline(
         monomer_data_pipeline=monomer_data_pipeline,
         jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
         uniprot_database_path=FLAGS.uniprot_database_path,
-        use_mmseqs2_align=(FLAGS.mmseqs2_binary_path is not None),
+        use_mmseqs2_align=True,
         use_precomputed_msas=FLAGS.use_precomputed_msas,
         max_uniprot_hits=FLAGS.uniprot_max_hits,
         separate_homomer_msas=FLAGS.separate_homomer_msas,

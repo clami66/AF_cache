@@ -1,70 +1,11 @@
 #!/usr/bin/env nextflow
 
-outputDir = 'outputs/'
-
-process split_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
-
-    input:
-    path fasta
-
-    output:
-    path "split_fasta/"
-
-    script:
-    """
-    mkdir -p split_fasta/
-    python ${params.af_cache_dir}/split_fasta.py $fasta split_fasta/
-    """
-}
-
-process ln_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
-
-    input:
-    path fasta
-
-    output:
-    path "fasta/*.fasta"
-
-    script:
-    """
-    ln -s $fasta fasta
-    """
-}
-
-process mmseqs_align {
-    executor = "${params.mmseqs_executor}"
-    clusterOptions "${params.mmseqs_executor_flags}"
-    publishDir {outputDir}
-    
-    input:
-    path fasta
-    
-    output:
-    path "alignments/"
-
-    script:
-    def use_env = params.use_env ? "--use-env" : ''
-    def n_cpu = params.n_gpu > 0 ? 32*params.n_gpu : params.max_cpus
-    """
-    if ${params.test}; then
-        mkdir -p alignments
-        cp /proj/beyondfold/apps/alphafoldv2.3.1_pad/alignment_examples/*.a3m alignments/
-    else
-        python ${params.af_cache_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
-    fi
-    """
-}
+include { split_fasta; ln_fasta; mmseqs_align; run_af_jobs } from './pipeline/common/modules'
 
 process convert_alignments {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
+    publishDir "${params.output_dir}", mode: 'copy'
 
     input:
     path alignments
@@ -74,14 +15,14 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/pipeline/af2/prepare_alignments.py $alignments AF_data/
     """
 }
 
 process parse_features {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}, mode: 'copy'
+    publishDir "${params.output_dir}", mode: 'copy'
     
     input:
     path fasta
@@ -92,15 +33,20 @@ process parse_features {
     
     script:
     """
+    # make sure that the custom installation of AF2.3 is found first
+    export PYTHONPATH="${params.af_cache_dir}:$PYTHONPATH"
     mkdir -p pickle_cache
-    python ${params.af_cache_dir}/parse_features.py --flagfile ${params.db_flagfile} --output_dir $af_data --fasta_paths $fasta --pickle_cache pickle_cache/
+    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.db_flagfile} \\
+                                                                 --output_dir $af_data \\
+                                                                 --fasta_paths $fasta \\
+                                                                 --pickle_cache pickle_cache/
     """
 }
 
 process format_af_jobs {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
+    publishDir "${params.output_dir}", mode: 'copy'
 
     input:
     path fasta
@@ -113,29 +59,12 @@ process format_af_jobs {
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
-    python ${params.af_cache_dir}/format_alphafold_jobs.py $fasta AF_data_multimer/ --conda_env ${params.conda_env} \\
-                                                            --pickle_dir ${outputDir}/pickle_cache \\
-                                                            --write_fastas \\
-                                                            --af_path ${params.af_cache_dir} \\
-                                                            $file_list
-    """
-}
-
-process run_af_jobs {
-    executor = "${params.af_executor}"
-    clusterOptions "${params.af_executor_flags}"
-    publishDir {outputDir}
-    
-    input:
-    path sbatch_script
-    
-    script:
-    """
-    if ${params.test}; then
-        echo "Launching $sbatch_script"
-    else
-        sh $sbatch_script
-    fi
+    python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
+                                                                        --conda_env ${params.conda_env} \\
+                                                                        --pickle_dir ${params.output_dir}/pickle_cache \\
+                                                                        --write_fastas \\
+                                                                        --af_path ${params.af_cache_dir} \\
+                                                                        $file_list
     """
 }
 

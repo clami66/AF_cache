@@ -82,9 +82,9 @@ af3_dir = '/path/to/your/af3/installation/'
 
 #### Scheduling and resource management
 
-Depending whether the pipeline runs on an HPC sytem or locally, these parameters can be varied to send jobs to different queues or running them locally.
+Depending whether the pipeline runs on an HPC sytem or locally, some parameters can be varied to send jobs to different schedulers or to run them on local CPU/GPU resourcers.
 
-For example, if running on a SLURM-based system one could send the alignment to a node with 8 GPUs and AF inference jobs to nodes with a single GPU while running lighter tasks (e.g. parsing features, copying files) locally (on the front node). That would be accomplished with the following:
+For example: on a SLURM-based system, one could send the alignment job to a node with 8 GPUs and all AF inference jobs to single-GPU nodes. Other lighter tasks (e.g. parsing features, copying files) can be sent to CPU-only nodes, or run locally (on the front node). That would be accomplished with the following settings in `nextflow.config`:
 
 ```
 mmseqs_executor = 'slurm'
@@ -97,7 +97,17 @@ other_executor = 'local'
 other_executor_flags = ''
 ```
 
-Consult the Nextlow docs to set up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
+If all tasks are running on a local machine, one can set all executors to `local`, then edit the executor to make sure that the job queue size is not larger than the number of GPUs available on said machine. For example, if four GPUs are on a local machine:
+
+```
+executor{
+    name = "local"
+    queueSize = 4
+    cpus = 32
+}
+```
+
+Consult the Nextlow docs for more information about setting up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
 
 ### Running the pipeline
 

@@ -1,70 +1,11 @@
 #!/usr/bin/env nextflow
 
-outputDir = 'outputs'
-
-process split_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
-
-    input:
-    path fasta
-
-    output:
-    path "split_fasta/"
-
-    script:
-    """
-    mkdir -p split_fasta/
-    python ${params.af_cache_dir}/split_fasta.py $fasta split_fasta/
-    """
-}
-
-process ln_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
-
-    input:
-    path fasta
-
-    output:
-    path "fasta/*.fasta"
-
-    script:
-    """
-    ln -s $fasta fasta
-    """
-}
-
-process mmseqs_align {
-    executor = "${params.mmseqs_executor}"
-    clusterOptions "-A ${params.proj_id} -t 2:00:00 --gpus ${params.n_gpu} --reservation=devel"
-    publishDir {outputDir}
-    
-    input:
-    path fasta
-    
-    output:
-    path "alignments/"
-
-    script:
-    def use_env = params.use_env ? "--use-env" : ''
-    def n_cpu = params.n_gpu > 0 ? 32*params.n_gpu : params.max_cpus
-    """
-    if ${params.test}; then
-        mkdir -p alignments
-        cp /proj/beyondfold/apps/alphafoldv2.3.1_pad/alignment_examples/*.a3m alignments/
-    else
-        python ${params.af_cache_dir}/run_msa_tool.py $fasta mmseqs2 ${params.mmseqs_db} --out_dir ./ --gpu --mmseqs ${params.mmseqs_bin} --n_cpu $n_cpu $use_env
-    fi
-    """
-}
+include { split_fasta; ln_fasta; mmseqs_align; run_af_jobs } from './pipeline/common/modules'
 
 process convert_alignments {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
+    publishDir "${params.output_dir}", mode: 'copy'
 
     input:
     path alignments
@@ -81,7 +22,7 @@ process convert_alignments {
 process parse_features {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}, mode: 'copy'
+    publishDir "${params.output_dir}", mode: 'copy'
     
     input:
     path fasta
@@ -100,7 +41,7 @@ process parse_features {
 process format_af_jobs {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir {outputDir}
+    publishDir "${params.output_dir}", mode: 'copy'
 
     input:
     path fasta
@@ -114,30 +55,13 @@ process format_af_jobs {
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
     python ${params.af_cache_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
-                                                                --json_dir ${outputDir}/json_cache \\
+                                                                --json_dir ${params.output_dir}/json_cache \\
                                                                 --af3_path ${params.af3_dir} $file_list \\
                                                                 --flagfiles ${params.af3_flagfile} \\
                                                                 ${params.af3_db_flagfile}
     """
 }
 
-process run_af_jobs {
-    executor = "${params.af_executor}"
-    clusterOptions "-A ${params.proj_id} -t 3-0 --gpus 1"
-    publishDir {outputDir}
-    
-    input:
-    path sbatch_script
-    
-    script:
-    """
-    if ${params.test}; then
-        echo "Launching $sbatch_script"
-    else
-        sh $sbatch_script
-    fi
-    """
-}
 
 workflow {
     // align
