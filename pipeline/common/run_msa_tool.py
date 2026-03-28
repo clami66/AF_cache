@@ -19,7 +19,6 @@ parser.add_argument("--max_hits", default=None, help="Number of max hits to repo
 parser.add_argument("--use_precomputed_msas", action="store_true")
 parser.add_argument("--n_cpu", default=32, type = int)
 parser.add_argument("--n_iter", type = int, default=None)
-parser.add_argument("--colab_dir", default="/proj/beyondfold/apps/ColabFold/", help="ColabFold code directory to run MMseqs2 alignments")
 parser.add_argument("--mmseqs", default="mmseqs", help="mmseqs binary path")
 parser.add_argument("--db1", default="uniref30_2302_db", help="ColabFold uniref DB name for MMseqs2")
 parser.add_argument("--db2", default="colabfold_envdb_202108_db", help="ColabFold env DB name for MMseqs2")
