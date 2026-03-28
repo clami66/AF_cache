@@ -1,4 +1,3 @@
---data_dir=/proj/beyondfold/apps/alphafold_data
 --use_gpu_relax=True
 --models_to_relax=NONE
 --models_to_use=model_1_multimer_v3

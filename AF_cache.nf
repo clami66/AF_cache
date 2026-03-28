@@ -34,7 +34,6 @@ process parse_features {
     script:
     """
     # make sure that the custom installation of AF2.3 is found first
-    export PYTHONPATH="${params.af_cache_dir}:$PYTHONPATH"
     mkdir -p pickle_cache
     python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af2_flagfile} \\
                                                                  --output_dir $af_data \\
