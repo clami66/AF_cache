@@ -41,6 +41,7 @@ process mmseqs_align {
     
     input:
     path fasta
+    path mmseqs_db
     
     output:
     path "alignments/"
@@ -55,7 +56,7 @@ process mmseqs_align {
         cp ${params.af_cache_dir}/test_data/alignments/*.a3m alignments/
     else
         python ${params.af_cache_dir}/pipeline/common/run_msa_tool.py $fasta \\
-                                                                       mmseqs2 ${params.mmseqs_db} \\
+                                                                       mmseqs2 ${mmseqs_db}/ \\
                                                                        --out_dir ./ \\
                                                                        --mmseqs ${params.mmseqs_bin} \\
                                                                        --n_cpu $n_cpu \\
