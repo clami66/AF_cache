@@ -91,7 +91,7 @@ process collect_pickles {
 workflow {
     // align
     split_fasta_path = split_fasta(file(params.fasta))
-    alignments_path = mmseqs_align(file(params.fasta))
+    alignments_path = mmseqs_align(file(params.fasta), params.mmseqs_db)
     
     // convert
     af_data_path = convert_alignments(alignments_path)
