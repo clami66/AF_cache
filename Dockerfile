@@ -73,7 +73,7 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 
 # Install pip packages.
 RUN pip3 install --upgrade pip --no-cache-dir \
-    && pip3 install -r /app/alphafold/requirements.txt --no-cache-dir
+    && pip3 install -r /app/alphafold/docker/requirements.txt --no-cache-dir
 
 # Add SETUID bit to the ldconfig binary so that non-root users can run it.
 RUN chmod u+s /sbin/ldconfig.real
