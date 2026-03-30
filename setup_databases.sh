@@ -95,8 +95,7 @@ if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
   MMCIF_DIR="mmcif_files"
   
   # seqres
-  downloadFile "https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt.gz" "pdb_seqres.txt.gz"
-  gunzip "pdb_seqres.txt.gz"
+  downloadFile "https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt" "pdb_seqres.txt"
 
   grep --after-context=1 --no-group-separator '>.* mol:protein' "pdb_seqres.txt" > "pdb_seqres_filtered.txt"
   mv "pdb_seqres_filtered.txt" "pdb_seqres.txt"
@@ -117,7 +116,7 @@ if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
   done
 
   find "${RAW_DIR}/" -type d -empty -delete
-  downloadFile "ftp://ftp.wwpdb.org/pub/pdb/data/status/obsolete.dat" "obsolete.dat"
+  downloadFile "https://files.wwpdb.org/pub/pdb/data/status/obsolete.dat" "obsolete.dat"
   touch PDB_MMCIF_READY
 fi
 
