@@ -91,14 +91,15 @@ if [ ! -f DOWNLOADS_READY ]; then
 fi
 
 if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
-  RAW_DIR="raw"
-  MMCIF_DIR="mmcif_files"
-  
+  RAW_DIR="pdb_mmcif/raw"
+  MMCIF_DIR="pdb_mmcif/mmcif_files"
+  SEQRES_DIR="pdb_seqres/"
   # seqres
-  downloadFile "https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt" "pdb_seqres.txt"
+  mkdir --parents "${SEQRES_DIR}"
+  downloadFile "https://files.rcsb.org/pub/pdb/derived_data/pdb_seqres.txt" "${SEQRES_DIR}/pdb_seqres.txt"
 
-  grep --after-context=1 --no-group-separator '>.* mol:protein' "pdb_seqres.txt" > "pdb_seqres_filtered.txt"
-  mv "pdb_seqres_filtered.txt" "pdb_seqres.txt"
+  grep --after-context=1 --no-group-separator '>.* mol:protein' "${SEQRES_DIR}/pdb_seqres.txt" > "${SEQRES_DIR}/pdb_seqres_filtered.txt"
+  mv "${SEQRES_DIR}/pdb_seqres_filtered.txt" "${SEQRES_DIR}/pdb_seqres.txt"
   
   # mmcif
   mkdir --parents "${RAW_DIR}"
@@ -116,7 +117,7 @@ if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
   done
 
   find "${RAW_DIR}/" -type d -empty -delete
-  downloadFile "https://files.wwpdb.org/pub/pdb/data/status/obsolete.dat" "obsolete.dat"
+  downloadFile "https://files.wwpdb.org/pub/pdb/data/status/obsolete.dat" "${MMCIF_DIR}/obsolete.dat"
   touch PDB_MMCIF_READY
 fi
 
