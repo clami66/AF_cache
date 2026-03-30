@@ -91,8 +91,32 @@ if [ ! -f DOWNLOADS_READY ]; then
 fi
 
 if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
-  sh ../scripts/download_pdb_mmcif.sh .
-  sh ../scripts/download_pdb_seqres.sh .
+  RAW_DIR="raw"
+  MMCIF_DIR="mmcif_files"
+  
+  # seqres
+  downloadFile "ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt" "pdb_seqres.txt"
+  downloadFile "ftp://ftp.wwpdb.org/pub/pdb/data/status/obsolete.dat" "obsolete.dat"
+
+  grep --after-context=1 --no-group-separator '>.* mol:protein' "pdb_seqres.txt" > "pdb_seqres_filtered.txt"
+  mv "pdb_seqres_filtered.txt" "pdb_seqres.txt"
+  
+  # mmcif
+  mkdir --parents "${RAW_DIR}"
+  rsync --recursive --links --perms --times --compress --info=progress2 --delete --port=33444 \
+  rsync.rcsb.org::ftp_data/structures/divided/mmCIF/ \
+  "${RAW_DIR}"
+  
+  echo "Unzipping all mmCIF files..."
+  find "${RAW_DIR}" -type f -iname "*.gz" -exec gunzip {} +
+  echo "Flattening all mmCIF files..."
+  mkdir --parents "${MMCIF_DIR}"
+  find "${RAW_DIR}" -type d -empty -delete  # Delete empty directories.
+  for subdir in "${RAW_DIR}"/*; do
+    mv "${subdir}/"*.cif "${MMCIF_DIR}"
+  done
+
+  find "${RAW_DIR}/" -type d -empty -delete
   touch PDB_MMCIF_READY
 fi
 
