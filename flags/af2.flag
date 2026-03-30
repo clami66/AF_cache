@@ -8,6 +8,3 @@
 --model_preset=multimer
 --use_precomputed_msas
 --max_template_date=2024-05-01
---template_mmcif_dir=/proj/beyondfold/apps/alphafold_data/pdb_mmcif/mmcif_files
---obsolete_pdbs_path=/proj/beyondfold/apps/alphafold_data/pdb_mmcif/obsolete.dat
---pdb_seqres_database_path=/proj/beyondfold/apps/alphafold_data/pdb_seqres/pdb_seqres.txt
