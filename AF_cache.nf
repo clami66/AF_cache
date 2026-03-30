@@ -36,6 +36,7 @@ process parse_features {
     path "pickle_cache/**.pkl.gz", emit: pkl
     
     script:
+    def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     # make sure that the custom installation of AF2.3 is found first
     mkdir -p pickle_cache
@@ -47,6 +48,7 @@ process parse_features {
                                                                  --template_mmcif_dir ${template_mmcif_dir} \\
                                                                  --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                                                                  --pdb_seqres_database_path ${pdb_seqres_database_path} \\
+                                                                 $skip_templates \\
                                                                  --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
                                                                  --pickle_cache pickle_cache/
     """
@@ -70,6 +72,7 @@ process format_af_jobs {
 
     script:
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
+    def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
                                                                         --pickle_dir $pickle_cache \\
@@ -81,6 +84,7 @@ process format_af_jobs {
                                                                         --mmseqs2_binary_path ${params.mmseqs_bin} \\
                                                                         --template_mmcif_dir ${template_mmcif_dir} \\
                                                                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
+                                                                        $skip_templates \\
                                                                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                                                                         --data_dir ${params.af2_data_dir} \\
                                                                         $file_list
