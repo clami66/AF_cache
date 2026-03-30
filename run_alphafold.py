@@ -180,6 +180,7 @@ flags.DEFINE_boolean('alignments_only', False, 'Whether to generate only alignme
 flags.DEFINE_integer('redundancy_reduce_templates', 100, 'Percentage of redundancy reduction for template hits')
 flags.DEFINE_list('pad_to_size', [None, None], 'Pad input features to a given seq. length x MSA depth. '
                      'This is useful when processing multiple sequences at once to avoid re-compiling the models')
+flags.DEFINE_boolean('templates', True, 'Enable template search in monomer and multimer pipeline')
 
 FLAGS = flags.FLAGS
 
@@ -490,7 +491,17 @@ def main(argv):
   if len(fasta_names) != len(set(fasta_names)):
     raise ValueError('All FASTA paths must have a unique basename.')
 
-  if run_multimer_system:
+  if not FLAGS.templates:
+    logging.info("Disabling templates")
+    template_searcher = None
+    template_featurizer = templates.HmmsearchHitFeaturizer(
+        mmcif_dir=FLAGS.template_mmcif_dir,
+        max_template_date=FLAGS.max_template_date,
+        max_hits=MAX_TEMPLATE_HITS,
+        kalign_binary_path=FLAGS.kalign_binary_path,
+        release_dates_path=None,
+        obsolete_pdbs_path=FLAGS.obsolete_pdbs_path)
+  elif run_multimer_system:
     logging.info("redundancy_reduce FLAG: %d", FLAGS.redundancy_reduce_templates)
     template_searcher = hmmsearch.Hmmsearch(
         binary_path=FLAGS.hmmsearch_binary_path,
