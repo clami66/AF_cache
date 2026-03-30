@@ -28,6 +28,9 @@ process parse_features {
     path fasta
     path af_data
     path mmseqs_db
+    path template_mmcif_dir
+    path obsolete_pdbs_path
+    path pdb_seqres_database_path
     
     output:
     path "pickle_cache/**.pkl.gz", emit: pkl
@@ -41,6 +44,9 @@ process parse_features {
                                                                  --fasta_paths $fasta \\
                                                                  --mmseqs2_uniref_database_path ${mmseqs_db}/uniref30_2302_db \\
                                                                  --mmseqs2_env_database_path ${mmseqs_db}/colabfold_envdb_202108_db \\
+                                                                 --template_mmcif_dir ${template_mmcif_dir} \\
+                                                                 --obsolete_pdbs_path ${obsolete_pdbs_path} \\
+                                                                 --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                                                                  --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
                                                                  --pickle_cache pickle_cache/
     """
@@ -110,7 +116,7 @@ workflow {
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path, params.mmseqs_db).pkl.collect()
+    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path, params.mmseqs_db, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).pkl.collect()
     pickle_cache = collect_pickles(pickles)
     
     // AF
