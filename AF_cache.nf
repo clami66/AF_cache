@@ -108,7 +108,10 @@ process run_af2_jobs {
     input:
     path sbatch_script
     path cache
-    
+    path template_mmcif_dir
+    path obsolete_pdbs_path
+    path pdb_seqres_database_path
+
     script:
     """
     sh $sbatch_script
@@ -127,5 +130,5 @@ workflow {
     
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
-    run_af2_jobs(sbatch_scripts, pickle_cache)
+    run_af2_jobs(sbatch_scripts, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
 }
