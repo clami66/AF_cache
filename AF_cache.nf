@@ -60,6 +60,9 @@ process format_af_jobs {
     input:
     path fasta
     path pickle_cache
+    path template_mmcif_dir
+    path obsolete_pdbs_path
+    path pdb_seqres_database_path
 
     output:
     path "AF_data_multimer/", emit: 'dir'
@@ -76,6 +79,9 @@ process format_af_jobs {
                                                                         --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
                                                                         --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
                                                                         --mmseqs2_binary_path ${params.mmseqs_bin} \\
+                                                                        --template_mmcif_dir ${template_mmcif_dir} \\
+                                                                        --obsolete_pdbs_path ${obsolete_pdbs_path} \\
+                                                                        --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                                                                         --data_dir ${params.af2_data_dir} \\
                                                                         $file_list
     """
@@ -120,6 +126,6 @@ workflow {
     pickle_cache = collect_pickles(pickles)
     
     // AF
-    sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache).sh.collect().flatten()
+    sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
     run_af2_jobs(sbatch_scripts, pickle_cache)
 }
