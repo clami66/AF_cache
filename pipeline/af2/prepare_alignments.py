@@ -10,7 +10,6 @@ from sys import argv
 from pathlib import Path
 from functools import partial
 from multiprocessing import Pool, TimeoutError
-from Bio import AlignIO
 
 
 def convert_alignment(in_alignment, out_dir, custom_taxids=None):
