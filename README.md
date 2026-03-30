@@ -16,10 +16,18 @@
    export AF_CACHE=$(pwd)
    ```
 
-4. Download and setup ColabFold DBs (instructions taken [here](https://colabfold.mmseqs.com/))
+4. Install MMseqs2 (for GPU or CPU) as follows:
+   ```bash
+   # GPU version:
+   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+
+   # Non-GPU version:
+   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+   ```
+
+5. Download and setup ColabFold DBs (instructions adapted from [here](https://colabfold.mmseqs.com/))
 
     ```bash
-    wget https://raw.githubusercontent.com/sokrypton/ColabFold/main/setup_databases.sh
     chmod +x setup_databases.sh
     # If you want to use GPU acceleration during the searches:
     GPU=1 ./setup_databases.sh database/
@@ -27,7 +35,7 @@
     # ./setup_databases.sh database/
     ```
 
-5. Install the environments necessary to run AlphaFold and MMseqs2. This can be done in multiple ways:
+6. Install the environments necessary to run AlphaFold and MMseqs2. This can be done in multiple ways:
    <details>
    <summary>Using Docker</summary>
 
@@ -79,22 +87,15 @@
    <details>
    <summary>Using conda/mamba</summary>
 
-   If you wish to use conda or mamba, a few extra steps are needed. First, you need to install MMseqs2 (for GPU or CPU) as follows:
-   ```bash
-   # GPU version:
-   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+   If you wish to use conda or mamba:
 
-   # Non-GPU version:
-   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
-   ```
-
-   Then, add the path to the `mmseqs` binary inside `nextflow.config`. If you install MMseqs2 inside the main repo directory, it should look as follows:
+   Add the path to the `mmseqs` binary inside `nextflow.config`. If you installed MMseqs2 inside the main repo directory, it should look as follows:
 
    ```
    mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
    ```
 
-   Lastly, enable conda inside `nextflow.config`:
+   Then, enable conda inside `nextflow.config`:
    ```
    docker {
         enabled = false
@@ -112,11 +113,9 @@
         cacheDir = "$AF_CACHE/conda"
     }
    ```
-   Then, run the pipeline for the first time and the conda environment will be automatically set up.
+   Lastly, run the pipeline for the first time and the conda environment will be automatically set up.
    You can also specify where the environment should be installed by setting `cacheDir`.
    </details>   
-
-
 
 6. Test the pipeline
 
