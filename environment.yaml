@@ -1,16 +1,34 @@
 name: AF_cache
 channels:
   - conda-forge
-  - bioconda
   - nvidia
+  - bioconda
 dependencies:
   - python>=3.7,<3.11
   - aria2
-  - openmm=8.0.0
+  - openmm=7.5.0
   - pdbfixer=1.7
   - cudnn=8.9.7.29
   - kalign3=3.2.2
   - hhsuite=3.3.0
   - hmmer=3.3.2
   - cuda-nvcc
-  - nextflow=24.10.4
+  - pip
+  - pip:
+    - absl-py==1.0.0
+    - biopython==1.79
+    - chex==0.0.7
+    - dm-haiku==0.0.12
+    - dm-tree==0.1.6
+    - docker==5.0.0
+    - immutabledict==2.0.0
+    - jax==0.4.26
+    - -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    - jaxlib==0.4.26+cuda12.cudnn89
+    - -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    - ml-collections==0.1.0
+    - numpy==1.24
+    - pandas==1.3.4
+    - scipy==1.11
+    - tensorflow-cpu==2.11.1
+    - flax==0.8.4
