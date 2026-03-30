@@ -46,10 +46,6 @@ RUN git clone --branch v3.3.0 --single-branch https://github.com/soedinglab/hh-s
     && popd \
     && rm -rf /tmp/hh-suite
 
-RUN wget -q https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz \
-    && tar xvfz mmseqs-linux-gpu.tar.gz \
-    && export PATH=/app/alphafold/mmseqs/bin/:$PATH
-
 # Install conda package manager.
 RUN wget -q -P /tmp \
   https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
@@ -71,6 +67,11 @@ COPY . /app/alphafold
 RUN wget -q -P /app/alphafold/alphafold/common/ \
   https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
 
+RUN wget -q https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz \
+    && tar xvfz mmseqs-linux-gpu.tar.gz -C /app/alphafold/ \
+    && rm mmseqs-linux-gpu.tar.gz \
+    && export PATH=/app/alphafold/mmseqs/bin/:$PATH
+  
 # Install pip packages.
 RUN pip3 install --upgrade pip --no-cache-dir \
     && pip3 install -r /app/alphafold/docker/requirements.txt --no-cache-dir
@@ -81,19 +82,5 @@ RUN chmod u+s /sbin/ldconfig.real
 # Currently needed to avoid undefined_symbol error.
 RUN ln -sf /usr/lib/x86_64-linux-gnu/libffi.so.7 /opt/conda/lib/libffi.so.7
 
-# We need to run `ldconfig` first to ensure GPUs are visible, due to some quirk
-# with Debian. See https://github.com/NVIDIA/nvidia-docker/issues/1399 for
-# details.
-# ENTRYPOINT does not support easily running multiple commands, so instead we
-# write a shell script to wrap them up.
-# WORKDIR /app/alphafold
-# RUN echo $'#!/bin/bash\n\
-# ldconfig\n\
-# export AF_CACHE=/app/alphafold\n\
-# script=$1\n\
-# shift\n\
-# nextflow /app/alphafold/${script} "$@"' > /app/run_alphafold.sh \
-#  && chmod +x /app/run_alphafold.sh
-#ENTRYPOINT ["/app/run_alphafold.sh"]
 ENV AF_CACHE="/app/alphafold"
 CMD ["/bin/bash"]
