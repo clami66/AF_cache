@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-include { split_fasta; ln_fasta; mmseqs_align; run_af_jobs } from './pipeline/common/modules'
+include { split_fasta; ln_fasta; mmseqs_align; } from './pipeline/common/modules'
 
 process convert_alignments {
     executor = "${params.other_executor}"
@@ -27,6 +27,7 @@ process parse_features {
     input:
     path fasta
     path af_data
+    path mmseqs_db
     
     output:
     path "pickle_cache/**.pkl.gz", emit: pkl
@@ -38,8 +39,8 @@ process parse_features {
     python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af2_flagfile} \\
                                                                  --output_dir $af_data \\
                                                                  --fasta_paths $fasta \\
-                                                                 --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
-                                                                 --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
+                                                                 --mmseqs2_uniref_database_path ${mmseqs_db}/uniref30_2302_db \\
+                                                                 --mmseqs2_env_database_path ${mmseqs_db}/colabfold_envdb_202108_db \\
                                                                  --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
                                                                  --pickle_cache pickle_cache/
     """
@@ -62,7 +63,6 @@ process format_af_jobs {
     def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
     """
     python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
-                                                                        --conda_env ${params.conda_env} \\
                                                                         --pickle_dir $pickle_cache \\
                                                                         --write_fastas \\
                                                                         --af_path ${params.af_cache_dir} \\
@@ -88,6 +88,21 @@ process collect_pickles {
     """
 }
 
+process run_af2_jobs {
+    executor = "${params.af_executor}"
+    clusterOptions "${params.af_executor_flags}"
+    publishDir "${params.output_dir}", mode: 'copy'
+    
+    input:
+    path sbatch_script
+    path cache
+    
+    script:
+    """
+    sh $sbatch_script
+    """
+}
+
 workflow {
     // align
     split_fasta_path = split_fasta(file(params.fasta))
@@ -95,10 +110,10 @@ workflow {
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).pkl.collect()
+    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path, params.mmseqs_db).pkl.collect()
     pickle_cache = collect_pickles(pickles)
     
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache).sh.collect().flatten()
-    run_af_jobs(sbatch_scripts, pickle_cache)
+    run_af2_jobs(sbatch_scripts, pickle_cache)
 }

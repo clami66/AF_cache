@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-include { split_fasta; ln_fasta; mmseqs_align; run_af_jobs } from './pipeline/common/modules'
+include { split_fasta; ln_fasta; mmseqs_align; } from './pipeline/common/modules'
 
 process convert_alignments {
     executor = "${params.other_executor}"
@@ -34,11 +34,10 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    conda run -p ${params.af3_conda_env} python ${params.af_cache_dir}/af3/parse_features.py \\
-                                                --output_dir $af_data \\
-                                                --fasta_paths $fasta \\
-                                                --json_cache json_cache/ \\
-                                                --flagfile ${params.af3_parse_flagfile}
+    python ${params.af_cache_dir}/af3/parse_features.py --output_dir $af_data \\
+                                                        --fasta_paths $fasta \\
+                                                        --json_cache json_cache/ \\
+                                                        --flagfile ${params.af3_parse_flagfile}
     """
 }
 
@@ -79,6 +78,21 @@ process collect_jsons {
     """
 }
 
+process run_af3_jobs {
+    executor = "${params.af_executor}"
+    clusterOptions "${params.af_executor_flags}"
+    publishDir "${params.output_dir}", mode: 'copy'
+    
+    input:
+    path sbatch_script
+    path cache
+    
+    script:
+    """
+    sh $sbatch_script
+    """
+}
+
 workflow {
     // align
     split_fasta_path = split_fasta(file(params.fasta))
@@ -91,5 +105,5 @@ workflow {
 
     // AF
     sbatch_scripts = format_af_jobs(split_fasta_path, json_cache).sh.collect().flatten()
-    run_af_jobs(sbatch_scripts)
+    run_af3_jobs(sbatch_scripts)
 }

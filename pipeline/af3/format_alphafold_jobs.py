@@ -17,6 +17,7 @@ def bash_header():
 
     return f"""#!/bin/bash
 module load Mambaforge/23.3.1-1-hpc1-bdist
+
 """
 
 
@@ -160,8 +161,6 @@ def main(args, af_args):
             log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
             with open(command_file, "w") as command:
                 command.write(bash_header())
-                command.write("\n")
-                command.write(f"conda activate {args.conda_env}\n")
                 command.write(format_af_command(str(input_json_dir), f"{out_dir}/{max_len}_{chunk_n}", flagfiles=args.flagfiles, af3_path=args.af3_path, other_args=af_args))
                 command.write("\n")
 
@@ -181,7 +180,6 @@ if __name__ == '__main__':
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[256, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 3584, 4096, 4608, 5120], help="Bucket boundaries to group multiple inference jobs")
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1, 1, 1, 1, 1, 1, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
-    parser.add_argument("--conda_env", default="AF_cache", help="Name or path for AlphaFold conda env")
 
     args, unknownargs = parser.parse_known_args()
 

@@ -15,7 +15,6 @@ def bash_header():
 export TF_FORCE_UNIFIED_MEMORY='1'
 export XLA_PYTHON_CLIENT_MEM_FRACTION='6.0'
 
-module load Mambaforge/23.3.1-1-hpc1-bdist
 """
 
 
@@ -115,7 +114,14 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         pairlist = []
 
-    binned_pairs = define_pairs(fasta_records, out_dir, splits, pairlist, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions)
+    binned_pairs = define_pairs(fasta_records, 
+                                out_dir, splits, 
+                                pairlist, 
+                                write_fastas=args.write_fastas, 
+                                overwrite_output=args.overwrite_output, 
+                                include_homomers=args.include_homomers, 
+                                both_directions=args.both_directions)
+
     Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
     estimated_gpu_runtime = 0
@@ -136,8 +142,6 @@ def main(args, af_args):
                 log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
                 with open(command_file, "w") as command:
                     command.write(bash_header())
-                    command.write("\n")
-                    command.write(f"conda activate {args.conda_env}\n")
                     command.write(format_af_command([target[0] for target in target_chunk], out_dir,
                                                     pickle_dir=args.pickle_dir,
                                                     pad_to_size=pad_to_size,
@@ -152,11 +156,11 @@ def main(args, af_args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
     parser.add_argument("in_path", help = "Path to the directory containing the fasta files")
+    parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
     parser.add_argument("--file_list", help = "Path to file containing a list of files to run (if not desire all against all)",default="")
     parser.add_argument("--list_separator", default=" ", help="Character used to separate protein pairs in file list (--file_list)")
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
     parser.add_argument("--both_directions", action="store_true", default=False, help="Run AB as well as BA")
-    parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
     parser.add_argument("--flagfile", help = "Flagfile with parameters to AF", default=None)
     parser.add_argument("--pickle_dir", default="", help="Path to directory containing pickled features for all monomers in set")
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
@@ -164,7 +168,6 @@ if __name__ == '__main__':
     parser.add_argument("--splits", nargs="+", default=[400, 800, 1000, 1200, 1400, 1600, 4500], help="Boundaries (sum of sequences length) to group multiple inference jobs")
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
     parser.add_argument("--estimate_gpu_runtime", action="store_true")
-    parser.add_argument("--conda_env", default="AF_cache", help="Name or path for AlphaFold conda env")
     parser.add_argument("--af_path", help="Path to AF2 installation")
 
     args, unknownargs = parser.parse_known_args()
