@@ -136,7 +136,8 @@ class DataPipeline:
                use_precomputed_msas: bool = False,
                alignments_only: bool = False,
                no_mgnify: bool = False,
-               no_uniref: bool = False,):
+               no_uniref: bool = False,
+               mmseqs2_gpu: bool = False):
     """Initializes the data pipeline."""
     self._use_small_bfd = use_small_bfd
 
@@ -145,7 +146,7 @@ class DataPipeline:
           binary_path=mmseqs2_binary_path,
           uniref_db=mmseqs2_uniref_database_path,
           metagenomic_db=mmseqs2_env_database_path,
-          gpu = ("gpu" in mmseqs2_uniref_database_path),
+          gpu=mmseqs2_gpu,
           )
     else:
       self.mmseqs2_runner = None
@@ -259,29 +260,32 @@ class DataPipeline:
         msa_for_templates = parsers.deduplicate_a3m_msa(msa_for_templates)
         msa_for_templates = parsers.remove_empty_columns_from_a3m_msa(msa_for_templates)
 
-    pdb_hits_out_path = os.path.join(
-        msa_output_dir, f'pdb_hits.{self.template_searcher.output_format}')
-    if not self.use_precomputed_msas or not os.path.isfile(pdb_hits_out_path):
-      if self.template_searcher.input_format == 'sto':
-        pdb_templates_result = self.template_searcher.query(msa_for_templates, actually_an_a3m=(self.mmseqs2_runner or self.no_uniref))
-      elif self.template_searcher.input_format == 'a3m':
-        if not self.no_uniref:
-          uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)
-          pdb_templates_result = self.template_searcher.query(uniref90_msa_as_a3m)
-        else: # msa is already a a3m
-          pdb_templates_result = self.template_searcher.query(msa_for_templates)
-      else:
-        raise ValueError('Unrecognized template input format: '
-                        f'{self.template_searcher.input_format}')
+    if self.template_searcher is not None:
+      pdb_hits_out_path = os.path.join(
+          msa_output_dir, f'pdb_hits.{self.template_searcher.output_format}')
+      if not self.use_precomputed_msas or not os.path.isfile(pdb_hits_out_path):
+        if self.template_searcher.input_format == 'sto':
+          pdb_templates_result = self.template_searcher.query(msa_for_templates, actually_an_a3m=(self.mmseqs2_runner or self.no_uniref))
+        elif self.template_searcher.input_format == 'a3m':
+          if not self.no_uniref:
+            uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)
+            pdb_templates_result = self.template_searcher.query(uniref90_msa_as_a3m)
+          else: # msa is already a a3m
+            pdb_templates_result = self.template_searcher.query(msa_for_templates)
+        else:
+          raise ValueError('Unrecognized template input format: '
+                          f'{self.template_searcher.input_format}')
 
-      with open(pdb_hits_out_path, 'w') as f:
-        f.write(pdb_templates_result)
-    else: # read a pre-existing pdb_hits.sto file
-      with open(pdb_hits_out_path) as f:
-        pdb_templates_result = f.read()
+        with open(pdb_hits_out_path, 'w') as f:
+          f.write(pdb_templates_result)
+      else: # read a pre-existing pdb_hits.sto file
+        with open(pdb_hits_out_path) as f:
+          pdb_templates_result = f.read()
 
-    pdb_template_hits = self.template_searcher.get_template_hits(
-        output_string=pdb_templates_result, input_sequence=input_sequence)
+      pdb_template_hits = self.template_searcher.get_template_hits(
+          output_string=pdb_templates_result, input_sequence=input_sequence)
+    else:
+      pdb_template_hits = []
 
     templates_result = self.template_featurizer.get_templates(
         query_sequence=input_sequence,

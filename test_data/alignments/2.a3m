@@ -1,0 +1,6 @@
+#cl-2|Representative= n=2 Descriptions=[] Members=
+
+>NC_023744.1_prot_YP_009018691.1_3 [gene=3] [locus_tag=DS6A_3] [db_xref=GeneID:18990001] [protein=hypothetical protein] [protein_id=YP_009018691.1] [location=complement(1312..1494)] [gbkey=CDS]
+MNWDAYNRQRAARIAAEAAKAPELAYCPECGTDRRVSGLMGADRRTLSTCGHVVSTAWLI
+>UniRef100_G8I4B3 Transcription factor zinc-finger domain-containing protein n=1 Tax=Mycobacterium phage DS6A TaxID=45764 RepID=G8I4B3_9CAUD
+MNWDAYNRQRAARIAAEAAKAPELAYCPECGTDRRVSGLMGADRRTLSTCGHVVSTAWLI

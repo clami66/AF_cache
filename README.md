@@ -2,80 +2,220 @@
 
 ## Installing AF_cache
 
-### Stand-alone installation
+1. [Install nextflow](https://www.nextflow.io/docs/latest/install.html)
 
-If you don't wish to use a Docker image, the installation and setup procedure is as follows:
+    ```bash
+    curl -s https://get.nextflow.io | bash
+    mv nextflow ~/bin/
+    ```
 
-1. [Install Miniforge](https://github.com/conda-forge/miniforge?tab=readme-ov-file#unix-like-platforms-macos-linux--wsl)
+3. Clone this repository and export the install path as follows:
+   ```bash
+   git clone https://github.com/clami66/AF_unmasked.git
+   cd AF_cache/
+   export AF_CACHE=$(pwd)
+   ```
 
-2. Set up conda environment, install dependencies:
+4. Install MMseqs2 (for GPU or CPU) as follows:
+   ```bash
+   # GPU version:
+   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
 
-```bash
-# clone this repository
-git clone https://github.com/clami66/AF_cache.git
-cd AF_cache/
+   # Non-GPU version:
+   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+   ```
 
-# install requirements with mamba/conda
-mamba env create --file=environment.yaml
-mamba activate AF_cache
+5. Download and setup ColabFold DBs (instructions adapted from [here](https://colabfold.mmseqs.com/))
 
-# install python requirements
-python -m pip install -r requirements.txt
+    ```bash
+    chmod +x setup_databases.sh
+    # If you want to use GPU acceleration during the searches:
+    GPU=1 ./setup_databases.sh database/
+    # If you DO NOT want to use GPU acceleration during the searches:
+    # ./setup_databases.sh database/
+    ```
+
+6. Install the environments necessary to run AlphaFold and MMseqs2. This can be done in multiple ways:
+   <details>
+   <summary>Using Docker</summary>
+
+   If you wish to use our Docker container, just open `nextflow.config` in the main repository folder and enable `docker` while disabling `apptainer` and `conda`:
+   ```
+   docker {
+        enabled = true
+        runOptions = "--gpus all"
+    }
+   
+   apptainer {
+        enabled = false
+        runOptions = "--nv"
+    }
+
+    conda {
+        enabled = false
+        useMamba = true
+        cacheDir = "$AF_CACHE/conda"
+    }
+   ```
+
+   Then, run the pipeline for the first time and the correct image will be pulled by nextflow.
+   </details>
+   <details>
+   <summary>Using Apptainer</summary>
+
+   If you wish to use Apptainer, just open `nextflow.config` in the main repository folder and enable `apptainer` while disabling `docker` and `conda`:
+   ```
+   docker {
+        enabled = false
+        runOptions = "--gpus all"
+    }
+   
+   apptainer {
+        enabled = true
+        runOptions = "--nv"
+    }
+
+    conda {
+        enabled = false
+        useMamba = true
+        cacheDir = "$AF_CACHE/conda"
+    }
+   ```
+
+   Then, run the pipeline for the first time and the correct image will be pulled by nextflow. You can specify where the `.sif` container image will be downloaded by setting the `NXF_APPTAINER_CACHEDIR` ennvar as desired.
+   </details>
+   <details>
+   <summary>Using conda/mamba</summary>
+
+   If you wish to use conda or mamba:
+
+   Add the path to the `mmseqs` binary inside `nextflow.config`. If you installed MMseqs2 inside the main repo directory, it should look as follows:
+
+   ```
+   mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
+   ```
+
+   Then, enable conda inside `nextflow.config`:
+   ```
+   docker {
+        enabled = false
+        runOptions = "--gpus all"
+    }
+   
+   apptainer {
+        enabled = false
+        runOptions = "--nv"
+    }
+
+    conda {
+        enabled = true
+        useMamba = true
+        cacheDir = "$AF_CACHE/conda"
+    }
+   ```
+   Lastly, run the pipeline for the first time and the conda environment will be automatically set up.
+   You can also specify where the environment should be installed by setting `cacheDir`.
+   </details>   
+
+6. Test the pipeline
+
+    ```
+    # --test skips the alignment step
+    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --test -resume
+    ```
+
+### Configuring the pipeline
+
+Most configuration is done within `nextflow.config`. Here, one can set up the installation paths of AF_cache, the ColabFold DBs, MMseqs2.
+
+#### Installation paths
+
+If the installation instructions were followed exactly, there is no need to change these:
+
 ```
-3. Download and setup MMseqs2 (more detailed instructions [here](https://github.com/soedinglab/mmseqs2))
-```bash
-# GPU version:
-wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
-
-# Non-GPU version:
-# wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+# necessary to export AF_CACHE install path
+af_cache_dir = '$AF_CACHE'
+mmseqs_db = '$AF_CACHE/database/'
+mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
 ```
 
-5. Download and setup ColabFold DBs (instructions taken [here](https://colabfold.mmseqs.com/))
+If the DBs and MMseqs2 were installed in some other location, the parameters need to be adjusted accordingly.
 
-```bash
-wget https://raw.githubusercontent.com/sokrypton/ColabFold/main/setup_databases.sh
-chmod +x setup_databases.sh
-# If you want to use GPU acceleration during the searches:
-GPU=1 ./setup_databases.sh database/
-# If you DO NOT want to use GPU acceleration during the searches:
-# ./setup_databases.sh database/
-```
+#### AlphaFold parameters
 
-## Nextflow PPI pipeline (recommended)
-
-1. Activate conda env:
+Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold2/AlphaFold3. Notice that the original AF2 template databases are still needed (`template_mmcif_dir`, `obsolete_pdbs_path`, `pdb_seqres_database_path`).
 
 ```
-conda activate AF_cache
-export AF_CACHE=$(pwd)
-```
+// af2 parameters
+af2_flagfile = '$AF_CACHE/flags/multimer.flag'
+af2_data_dir = '/path/to/af2/parameters'
+template_mmcif_dir = '.../pdb_mmcif/mmcif_files'
+obsolete_pdbs_path = '.../pdb_mmcif/obsolete.dat'
+pdb_seqres_database_path = '.../pdb_seqres.txt'
 
-2. Concatenate all fasta sequences into a single file. This is necessary only to run MMseqs2
-
-```
-$ cat fasta_seqs/*.fasta > all_seqs.fasta
-```
-
-3. Run the Nextflow workflow on a GPU node with e.g. 4 GPUs:
-
-```
-# -resume avoids re-running completed steps if the job crashed
-$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id
-```
-
-To restrict the interactions to a list of `prot1 prot2` pairs, pass the absolute path to the list `multimers_list`:
-
-```
-$ head multimers_list 
-YP00901869113 YP00901869113
-YP00901869012 YP00901869012
+// af3 parameters
+af3_dir = '/path/to/your/af3/installation/'
 ...
-
-$ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id --file_list $(realpath multimers_list)
 ```
 
-## Running alignments and other steps separately
+**NB:** the flagfiles (`af_flagfile`, `db_flagfile`, etc.) are a convenient place to set all the necessary flags to run AlphaFold. In this repo, we have a set of predefined flagfiles (inside `flags/`).
+
+#### Scheduling and resource management
+
+Depending whether the pipeline runs on an HPC sytem or locally, some parameters can be varied to send jobs to different schedulers or to run them on local CPU/GPU resourcers.
+
+For example: on a SLURM-based system, one could send the alignment job to a node with 8 GPUs and all AF inference jobs to single-GPU nodes. Other lighter tasks (e.g. parsing features, copying files) can be sent to CPU-only nodes, or run locally (on the front node). That would be accomplished with the following settings in `nextflow.config`:
+
+```
+mmseqs_executor = 'slurm'
+mmseqs_executor_flags = '--account your-account-ID --gpus 8 --time 12:00:00'
+
+af_executor = 'slurm'
+af_executor_flags = '--account your-account-ID --gpus 1 --time 12:00:00'
+
+other_executor = 'local'
+other_executor_flags = ''
+```
+
+If all tasks are running on a local machine, one can set all executors to `local`, then edit the executor to make sure that the job queue size is not larger than the number of GPUs available on said machine. For example, if four GPUs are on a local machine:
+
+```
+executor{
+    name = "local"
+    queueSize = 4
+    cpus = 32
+}
+```
+
+Consult the Nextlow docs for more information about setting up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
+
+### Running the pipeline
+
+1. Concatenate all fasta sequences into a single file:
+
+    ```
+    $ cat fasta_seqs/*.fasta > all_seqs.fasta
+    ```
+
+3. Launch the Nextflow workflow:
+
+    ```
+    # -resume avoids re-running completed steps if the job crashed
+    $ nextflow AF_cache.nf -resume --fasta all.fasta
+    ```
+
+    To restrict the interactions to a list of `prot1 prot2` pairs, pass the absolute path to the list `multimers_list`:
+    
+    ```
+    $ head multimers_list 
+    YP00901869113 YP00901869113
+    YP00901869012 YP00901869012
+    ...
+    
+    $ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id --file_list $(realpath multimers_list)
+    ```
+
+## Running alignments and other steps separately (not recommended)
 
 1. Run alignments with MMseqs2
 

@@ -1,0 +1,10 @@
+--use_gpu_relax=True
+--models_to_relax=NONE
+--models_to_use=model_1_multimer_v3
+--num_multimer_predictions_per_model=1
+--max_recycles=20
+--redundancy_reduce_templates=99
+--db_preset=full_dbs
+--model_preset=multimer
+--use_precomputed_msas
+--max_template_date=2024-05-01

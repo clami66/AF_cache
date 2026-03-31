@@ -80,6 +80,7 @@ flags.DEFINE_string('mmseqs2_uniref_database_path', None, 'Path to the Uniref30 
                     'database for use by MMseqs2.')
 flags.DEFINE_string('mmseqs2_env_database_path', None, 'Path to the environmental '
                     'database for use by MMseqs2.')
+flags.DEFINE_boolean('mmseqs2_gpu', False, 'Use GPU version of mmseqs2')
 flags.DEFINE_string('uniref90_database_path', None, 'Path to the Uniref90 '
                     'database for use by JackHMMER.')
 flags.DEFINE_string('mgnify_database_path', None, 'Path to the MGnify '
@@ -179,6 +180,7 @@ flags.DEFINE_boolean('alignments_only', False, 'Whether to generate only alignme
 flags.DEFINE_integer('redundancy_reduce_templates', 100, 'Percentage of redundancy reduction for template hits')
 flags.DEFINE_list('pad_to_size', [None, None], 'Pad input features to a given seq. length x MSA depth. '
                      'This is useful when processing multiple sequences at once to avoid re-compiling the models')
+flags.DEFINE_boolean('templates', True, 'Enable template search in monomer and multimer pipeline')
 
 FLAGS = flags.FLAGS
 
@@ -477,20 +479,7 @@ def main(argv):
                        'sure it is installed on your system.')
 
   use_small_bfd = FLAGS.db_preset == 'reduced_dbs'
-  _check_flag('small_bfd_database_path', 'db_preset',
-              should_be_set=use_small_bfd)
-  _check_flag('bfd_database_path', 'db_preset',
-              should_be_set=not use_small_bfd)
-  _check_flag('uniref30_database_path', 'db_preset',
-              should_be_set=not use_small_bfd)
-
   run_multimer_system = 'multimer' in FLAGS.model_preset
-  _check_flag('pdb70_database_path', 'model_preset',
-              should_be_set=not run_multimer_system)
-  _check_flag('pdb_seqres_database_path', 'model_preset',
-              should_be_set=run_multimer_system)
-  _check_flag('uniprot_database_path', 'model_preset',
-              should_be_set=run_multimer_system)
 
   if FLAGS.model_preset == 'monomer_casp14':
     num_ensemble = 8
@@ -502,7 +491,17 @@ def main(argv):
   if len(fasta_names) != len(set(fasta_names)):
     raise ValueError('All FASTA paths must have a unique basename.')
 
-  if run_multimer_system:
+  if not FLAGS.templates:
+    logging.info("Disabling templates")
+    template_searcher = None
+    template_featurizer = templates.HmmsearchHitFeaturizer(
+        mmcif_dir=FLAGS.template_mmcif_dir,
+        max_template_date=FLAGS.max_template_date,
+        max_hits=MAX_TEMPLATE_HITS,
+        kalign_binary_path=FLAGS.kalign_binary_path,
+        release_dates_path=None,
+        obsolete_pdbs_path=None)
+  elif run_multimer_system:
     logging.info("redundancy_reduce FLAG: %d", FLAGS.redundancy_reduce_templates)
     template_searcher = hmmsearch.Hmmsearch(
         binary_path=FLAGS.hmmsearch_binary_path,
@@ -548,7 +547,8 @@ def main(argv):
       bfd_max_hits=FLAGS.bfd_max_hits,
       alignments_only=FLAGS.alignments_only,
       no_uniref=FLAGS.no_uniref,
-      no_mgnify=FLAGS.no_mgnify,)
+      no_mgnify=FLAGS.no_mgnify,
+      mmseqs2_gpu=FLAGS.mmseqs2_gpu)
 
   if run_multimer_system:
     num_predictions_per_model = FLAGS.num_multimer_predictions_per_model
@@ -590,8 +590,6 @@ if __name__ == '__main__':
       'fasta_paths',
       'output_dir',
       'data_dir',
-      'uniref90_database_path',
-      'mgnify_database_path',
       'template_mmcif_dir',
       'max_template_date',
       'obsolete_pdbs_path',
