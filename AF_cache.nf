@@ -23,14 +23,15 @@ process parse_features {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
-    
+    cache 'lenient'
+
     input:
     path fasta
     path af_data
     path mmseqs_db
-    path template_mmcif_dir
-    path obsolete_pdbs_path
-    path pdb_seqres_database_path
+    path template_mmcif_dir, stageAs: 'mmcif/*'
+    path obsolete_pdbs_path, stageAs: 'obsolete/*'
+    path pdb_seqres_database_path, stageAs: 'seqres/*'
     
     output:
     path "pickle_cache/**.pkl.gz", emit: pkl
@@ -62,16 +63,17 @@ process format_af_jobs {
     input:
     path fasta
     path pickle_cache
-    path template_mmcif_dir
-    path obsolete_pdbs_path
-    path pdb_seqres_database_path
+    path pair_list
+    path template_mmcif_dir, stageAs: 'mmcif/*'
+    path obsolete_pdbs_path, stageAs: 'obsolete/*'
+    path pdb_seqres_database_path, stageAs: 'seqres/*'
 
     output:
     path "AF_data_multimer/", emit: 'dir'
     path "AF_data_multimer/**.sh", emit: sh
 
     script:
-    def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
+    def plist = pair_list.name != '.NO_FILE' ? "--file_list $pair_list" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
@@ -84,10 +86,10 @@ process format_af_jobs {
                                                                         --mmseqs2_binary_path ${params.mmseqs_bin} \\
                                                                         --template_mmcif_dir ${template_mmcif_dir} \\
                                                                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
-                                                                        $skip_templates \\
                                                                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                                                                         --data_dir ${params.af2_data_dir} \\
-                                                                        $file_list
+                                                                        $skip_templates \\
+                                                                        $plist
     """
 }
 
@@ -112,9 +114,9 @@ process run_af2_jobs {
     input:
     path sbatch_script
     path cache
-    path template_mmcif_dir
-    path obsolete_pdbs_path
-    path pdb_seqres_database_path
+    path template_mmcif_dir, stageAs: 'mmcif/*'
+    path obsolete_pdbs_path, stageAs: 'obsolete/*'
+    path pdb_seqres_database_path, stageAs: 'seqres/*'
 
     script:
     """
@@ -133,6 +135,6 @@ workflow {
     pickle_cache = collect_pickles(pickles)
     
     // AF
-    sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
+    sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache, file(params.pair_list), params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
     run_af2_jobs(sbatch_scripts, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
 }

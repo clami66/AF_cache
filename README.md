@@ -194,17 +194,17 @@ Consult the Nextlow docs for more information about setting up different executo
 1. Concatenate all fasta sequences into a single file:
 
     ```
-    $ cat fasta_seqs/*.fasta > all_seqs.fasta
+    cat fasta_seqs/*.fasta > all_seqs.fasta
     ```
 
 3. Launch the Nextflow workflow:
 
     ```
     # -resume avoids re-running completed steps if the job crashed
-    $ nextflow AF_cache.nf -resume --fasta all.fasta
+    nextflow AF_cache.nf --fasta all.fasta -resume
     ```
 
-    To restrict the interactions to a list of `prot1 prot2` pairs, pass the absolute path to the list `multimers_list`:
+    To restrict the interactions to a list of `prot1 prot2` pairs, use the parameter `--pair_list`:
     
     ```
     $ head multimers_list 
@@ -212,7 +212,7 @@ Consult the Nextlow docs for more information about setting up different executo
     YP00901869012 YP00901869012
     ...
     
-    $ nextflow AF_cache.nf -resume --fasta all.fasta --use_env --n_gpu 4 --proj_id slurm-proj-id --file_list $(realpath multimers_list)
+    nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
     ```
 
 ## Running alignments and other steps separately (not recommended)
@@ -226,7 +226,7 @@ mmseqs_db=/path/to/mmseqs_db
 mmseqs_bin=/path/to/mmseqs
 
 # 128 cpus for 4 GPUs on berzelius, 256 for 8 GPUs etc
-$ python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
+python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
 ```
 
 CPU (not recommended):
