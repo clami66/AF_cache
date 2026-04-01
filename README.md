@@ -13,19 +13,26 @@
    ```bash
    git clone https://github.com/clami66/AF_unmasked.git
    cd AF_cache/
-   export AF_CACHE=$(pwd)
+
+   # export installation path to bash profile, change accordingly if using e.g. zsh
+   echo "export AF_CACHE=$(pwd)" >> ~/.bashrc
+   source ~/.bashrc
    ```
 
 4. Install MMseqs2 (for GPU or CPU) as follows:
    ```bash
    # GPU version:
-   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz; tar xvfz mmseqs-linux-gpu.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz
+   tar xvfz mmseqs-linux-gpu.tar.gz
+   echo "export PATH=$(pwd)/mmseqs/bin/:$PATH" >> ~/.bashrc
 
    # Non-GPU version:
-   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
+   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz
+   # tar xvfz mmseqs-linux-avx2.tar.gz
+   # echo "export PATH=$(pwd)/mmseqs/bin/:$PATH" >> ~/.bashrc
    ```
 
-5. Download and setup ColabFold DBs (instructions adapted from [here](https://colabfold.mmseqs.com/))
+5. Download and setup ColabFold DBs, including AlphaFold PDB DBs (script adapted from [here](https://colabfold.mmseqs.com/))
 
     ```bash
     chmod +x setup_databases.sh
@@ -89,13 +96,13 @@
 
    If you wish to use conda or mamba:
 
-   Add the path to the `mmseqs` binary inside `nextflow.config`. If you installed MMseqs2 inside the main repo directory, it should look as follows:
+   Make sure that the `mmseqs` binary path is correctly set inside `nextflow.config`. If you installed MMseqs2 inside the main repo directory, it should already be correct:
 
    ```
-   mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
+   mmseqs_bin = "$AF_CACHE/mmseqs/bin/mmseqs"
    ```
 
-   Then, enable conda inside `nextflow.config`:
+   Then, enable conda inside `nextflow.config`. If mamba is installed on the system, then it can be enabled with `useMamba`:
    ```
    docker {
         enabled = false
@@ -109,19 +116,20 @@
 
     conda {
         enabled = true
-        useMamba = true
+        useMamba = false
         cacheDir = "$AF_CACHE/conda"
     }
    ```
-   Lastly, run the pipeline for the first time and the conda environment will be automatically set up.
-   You can also specify where the environment should be installed by setting `cacheDir`.
+   Lastly, running the pipeline for the first time will install the conda env automatically.
+   
+   The default environment installation path can be changed with `cacheDir`.
    </details>   
 
 6. Test the pipeline
 
     ```
-    # --test skips the alignment step
-    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --test -resume
+    # add --test to skip the alignment step
+    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
     ```
 
 ### Configuring the pipeline
@@ -134,31 +142,53 @@ If the installation instructions were followed exactly, there is no need to chan
 
 ```
 # necessary to export AF_CACHE install path
-af_cache_dir = '$AF_CACHE'
-mmseqs_db = '$AF_CACHE/database/'
-mmseqs_bin = '$AF_CACHE/mmseqs/bin/mmseqs'
+af_cache_dir = "$AF_CACHE"
+mmseqs_db = "$AF_CACHE/database/"
+mmseqs_bin = "$AF_CACHE/mmseqs/bin/mmseqs"
 ```
 
 If the DBs and MMseqs2 were installed in some other location, the parameters need to be adjusted accordingly.
 
 #### AlphaFold parameters
 
-Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold2/AlphaFold3. Notice that the original AF2 template databases are still needed (`template_mmcif_dir`, `obsolete_pdbs_path`, `pdb_seqres_database_path`).
+Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold2/AlphaFold3.
 
 ```
 // af2 parameters
-af2_flagfile = '$AF_CACHE/flags/multimer.flag'
-af2_data_dir = '/path/to/af2/parameters'
-template_mmcif_dir = '.../pdb_mmcif/mmcif_files'
-obsolete_pdbs_path = '.../pdb_mmcif/obsolete.dat'
-pdb_seqres_database_path = '.../pdb_seqres.txt'
+af2_data_dir = "/path/to/af2/parameters"
+af2_flagfile = "$AF_CACHE/flags/multimer.flag"
+template_mmcif_dir = "$AF_CACHE/database/pdb_mmcif/mmcif_files"
+obsolete_pdbs_path = "$AF_CACHE/database/pdb_mmcif/obsolete.dat"
+pdb_seqres_database_path = "$AF_CACHE/database/pdb_seqres/pdb_seqres.txt"
 
 // af3 parameters
 af3_dir = '/path/to/your/af3/installation/'
 ...
 ```
 
-**NB:** the flagfiles (`af_flagfile`, `db_flagfile`, etc.) are a convenient place to set all the necessary flags to run AlphaFold. In this repo, we have a set of predefined flagfiles (inside `flags/`).
+The flagfiles (`af_flagfile`, `af3_flagfile` etc.) are a convenient place to store all the necessary flags to set up AlphaFold inference runs. In this repo, we have a set of predefined flagfiles (inside `flags/`).
+
+**Templates**
+
+If the databases were installed as specified above, the template DB paths should already be correct inside `nextflow.config`
+
+```
+skip_templates = false
+template_mmcif_dir = "$AF_CACHE/database/pdb_mmcif/mmcif_files"
+obsolete_pdbs_path = "$AF_CACHE/database/pdb_mmcif/obsolete.dat"
+pdb_seqres_database_path = "$AF_CACHE/database/pdb_seqres/pdb_seqres.txt"
+```
+
+But they can also point to DBs from a previous installation of AlphaFold2.
+
+If the pipeline should run without templates, that can be done by setting the `skip_templates` parameter. In tthat case, the template DB paths are not necessary and can be defined as `no_file`:
+
+```
+skip_templates = true
+template_mmcif_dir = no_file
+obsolete_pdbs_path = no_file
+pdb_seqres_database_path = no_file
+```
 
 #### Scheduling and resource management
 
@@ -225,7 +255,6 @@ conda activate AF_cache
 mmseqs_db=/path/to/mmseqs_db
 mmseqs_bin=/path/to/mmseqs
 
-# 128 cpus for 4 GPUs on berzelius, 256 for 8 GPUs etc
 python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
 ```
 
@@ -253,7 +282,7 @@ $ ls fasta_seqs/*.fasta | parallel -j $n_cpu python $AF_CACHE/parse_features.py 
 3. [optional] Generate all-vs-all fasta files, AF folder structures and package together jobs in multimer scripts:
 
 ```
-$ python $AF_CACHE/format_alphafold_jobs.py fasta_seqs/ AF_outdir/ --pickle_dir pickle_cache --write_fastas --proj_id <berzelius-proj-id>
+$ python $AF_CACHE/format_alphafold_jobs.py fasta_seqs/ AF_outdir/ --pickle_dir pickle_cache --write_fastas --proj_id <proj-id>
 ```
 
     Expected outputs:
