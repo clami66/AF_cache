@@ -15,15 +15,15 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/af3/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/pipeline/af3/prepare_alignments.py $alignments AF_data/
     """
 }
 
-process parse_features {
+process parse_features_af3 {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
-    
+
     input:
     path fasta
     path af_data
@@ -34,10 +34,11 @@ process parse_features {
     script:
     """
     mkdir -p json_cache
-    python ${params.af_cache_dir}/af3/parse_features.py --output_dir $af_data \\
+    python ${params.af_cache_dir}/pipeline/af3/parse_features.py --output_dir $af_data \\
                                                         --fasta_paths $fasta \\
                                                         --json_cache json_cache/ \\
-                                                        --flagfile ${params.af3_parse_flagfile}
+                                                        --flagfile ${params.af3_flagfile} \\
+                                                        --undefok=num_diffusion_samples
     """
 }
 
@@ -49,19 +50,20 @@ process format_af_jobs {
     input:
     path fasta
     path json_cache
+    path pair_list
 
     output:
     path "AF_data_multimer/", emit: 'dir'
     path "AF_data_multimer/**.sh", emit: sh
 
     script:
-    def file_list = params.file_list != '' ? "--file_list ${params.file_list}" : ''
+    def plist = pair_list.name != '.NO_FILE' ? "--file_list $pair_list" : ''
     """
-    python ${params.af_cache_dir}/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
-                                                                --json_dir ${params.output_dir}/json_cache \\
-                                                                --af3_path ${params.af3_dir} $file_list \\
-                                                                --flagfiles ${params.af3_flagfile} \\
-                                                                ${params.af3_db_flagfile}
+    python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
+                                                                --json_dir $json_cache \\
+                                                                --af3_path ${params.af3_install_path} \\
+                                                                --flagfile ${params.af3_flagfile} \\
+                                                                $plist
     """
 }
 
@@ -96,14 +98,14 @@ process run_af3_jobs {
 workflow {
     // align
     split_fasta_path = split_fasta(file(params.fasta))
-    alignments_path = mmseqs_align(file(params.fasta))
+    alignments_path = mmseqs_align(file(params.fasta), params.mmseqs_db)
     
     // convert
     af_data_path = convert_alignments(alignments_path)
-    jsons = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path).collect()
+    jsons = parse_features_af3(ln_fasta(split_fasta_path).flatten(), af_data_path).collect()
     json_cache = collect_jsons(jsons)
 
     // AF
-    sbatch_scripts = format_af_jobs(split_fasta_path, json_cache).sh.collect().flatten()
-    run_af3_jobs(sbatch_scripts)
+    sbatch_scripts = format_af_jobs(split_fasta_path, json_cache, file(params.pair_list)).sh.collect().flatten()
+    run_af3_jobs(sbatch_scripts, json_cache)
 }

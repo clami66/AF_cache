@@ -16,7 +16,6 @@ ascii_upperlower = ascii_uppercase + ascii_lowercase
 def bash_header():
 
     return f"""#!/bin/bash
-module load Mambaforge/23.3.1-1-hpc1-bdist
 
 """
 
