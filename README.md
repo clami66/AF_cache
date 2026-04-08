@@ -11,7 +11,7 @@
 
 3. Clone this repository and export the install path as follows:
    ```bash
-   git clone https://github.com/clami66/AF_unmasked.git
+   git clone https://github.com/clami66/AF_cache.git
    cd AF_cache/
 
    # export installation path to bash profile, change accordingly if using e.g. zsh
