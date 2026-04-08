@@ -234,14 +234,15 @@ Consult the Nextlow docs for more information about setting up different executo
     nextflow AF_cache.nf --fasta all.fasta -resume
     ```
 
-    To restrict the interactions to a list of `prot1 prot2` pairs, use the parameter `--pair_list`:
+    To restrict the interactions to a list of `prot1 prot2` pairs, use the parameter `--pair_list`. Even though the pipeline is thought for dimer interactions, more than two partners can be specified:
     
     ```
     $ head multimers_list 
     YP00901869113 YP00901869113
-    YP00901869012 YP00901869012
+    YP00901869012 YP00901869012 YP00901869113
     ...
     
+    # will generate predictions for one homodimer and one heterotrimer:
     nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
     ```
 
