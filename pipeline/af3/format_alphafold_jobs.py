@@ -137,7 +137,7 @@ def main(args, af_args):
         multimer_list = []
 
     multimers = group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir=args.json_dir, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions)
-    Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
+    Path("sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
 
     num_jobs = 0
@@ -156,7 +156,7 @@ def main(args, af_args):
                 os.symlink(target_json, f"{input_json_dir}/{os.path.basename(target_json)}")
             num_jobs += 1
 
-            command_file = Path(out_dir, "sbatch_scripts", f"{max_len}_{chunk_n}.sh")
+            command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
             log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
             with open(command_file, "w") as command:
                 command.write(bash_header())

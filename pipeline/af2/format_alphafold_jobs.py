@@ -122,7 +122,7 @@ def main(args, af_args):
                                 include_homomers=args.include_homomers, 
                                 both_directions=args.both_directions)
 
-    Path(out_dir, "sbatch_scripts").mkdir(parents=True, exist_ok=True)
+    Path("sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
     estimated_gpu_runtime = 0
     num_jobs = 0
@@ -138,7 +138,7 @@ def main(args, af_args):
             num_jobs += 1
             estimated_gpu_runtime += 120/3600 # ~2 minutes per job to compile models etc
             if not args.estimate_gpu_runtime:
-                command_file = Path(out_dir, "sbatch_scripts", f"{max_len}_{chunk_n}.sh")
+                command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
                 log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
                 with open(command_file, "w") as command:
                     command.write(bash_header())

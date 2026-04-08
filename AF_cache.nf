@@ -58,7 +58,7 @@ process parse_features {
 process format_af_jobs {
     executor = "${params.other_executor}"
     clusterOptions = "${params.other_executor_flags}"
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}"
 
     input:
     path fasta
@@ -70,7 +70,7 @@ process format_af_jobs {
 
     output:
     path "AF_data_multimer/", emit: 'dir'
-    path "AF_data_multimer/**.sh", emit: sh
+    path "sbatch_scripts/**.sh", emit: sh
 
     script:
     def plist = pair_list.name != '.NO_FILE' ? "--file_list $pair_list" : ''
@@ -109,7 +109,6 @@ process collect_pickles {
 process run_af2_jobs {
     executor = "${params.af_executor}"
     clusterOptions "${params.af_executor_flags}"
-    publishDir "${params.output_dir}", mode: 'copy'
     
     input:
     path sbatch_script
