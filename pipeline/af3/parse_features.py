@@ -7,7 +7,6 @@ import datetime
 
 from absl import app
 from absl import flags
-from Bio import SeqIO
 
 from alphafold3.data.pipeline import _get_protein_templates
 from alphafold3.data import msa_config
@@ -51,6 +50,32 @@ _MAX_TEMPLATE_DATE = flags.DEFINE_string(
 
 FLAGS = flags.FLAGS
 
+def SimpleFastaParser(handle):
+    # taken from Bio.SeqIO.FastaIO
+    # Skip any text before the first record (e.g. blank lines, comments)
+    for line in handle:
+        if line[0] == ">":
+            title = line[1:].rstrip()
+            break
+    else:
+        # no break encountered - probably an empty file
+        return
+
+    # Main logic
+    # Note, remove trailing whitespace, and any internal spaces
+    # (and any embedded \r which are possible in mangled files
+    # when not opened in universal read lines mode)
+    lines = []
+    for line in handle:
+        if line[0] == ">":
+            yield title, "".join(lines).replace(" ", "").replace("\r", "")
+            lines = []
+            title = line[1:].rstrip()
+            continue
+        lines.append(line.rstrip())
+
+    yield title, "".join(lines).replace(" ", "").replace("\r", "")
+
 
 def main(_):
 
@@ -90,7 +115,9 @@ def main(_):
     unpaired_msa_path = os.path.realpath(os.path.join(output_dir, "unpaired_hits.a3m"))
 
     target_sequences_dict = []
-    target_sequence = [record.seq for record in SeqIO.parse(fasta_path, "fasta")][0]
+    with open(fasta_path, 'r') as f:
+        target_sequence = [record for record in SimpleFastaParser(f)][0][1]
+    #target_sequence = [record.seq for record in SeqIO.parse(fasta_path, "fasta")][0]
     sequence_hash = hashlib.md5(str(target_sequence).encode()).hexdigest()
     out_json = os.path.join(FLAGS.json_cache, f"{sequence_hash}.json")
 
