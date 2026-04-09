@@ -42,6 +42,7 @@ import alphafold3.cpp
 from alphafold3.data import featurisation
 from alphafold3.data import pipeline
 from alphafold3.data.tools import shards
+from alphafold3.jax.attention import attention
 from alphafold3.model import features
 from alphafold3.model import model
 from alphafold3.model import params
@@ -51,7 +52,6 @@ import haiku as hk
 import jax
 from jax import numpy as jnp
 import numpy as np
-import tokamax
 
 
 _HOME_DIR = pathlib.Path(os.environ.get('HOME'))
@@ -369,18 +369,11 @@ _FORCE_OUTPUT_DIR = flags.DEFINE_bool(
     ' and is non-empty. Useful to set this to True to run the data pipeline and'
     ' the inference separately, but use the same output directory.',
 )
-_COMPRESS_LARGE_OUTPUT_FILES = flags.DEFINE_bool(
-    'compress_large_output_files',
-    False,
-    'If True, compresses the output mmCIF and confidences JSON files (the two'
-    ' largest files) using zstandard. Note that embeddings and distogram, if'
-    ' saved, are already stored in a compressed format.',
-)
 
 
 def make_model_config(
     *,
-    flash_attention_implementation: tokamax.DotProductAttentionImplementation = 'triton',
+    flash_attention_implementation: attention.Implementation = 'triton',
     num_diffusion_samples: int = 5,
     num_recycles: int = 10,
     return_embeddings: bool = False,
@@ -601,7 +594,6 @@ def write_outputs(
     all_inference_results: Sequence[ResultsForSeed],
     output_dir: os.PathLike[str] | str,
     job_name: str,
-    compress_large_output_files: bool = False,
 ) -> None:
   """Writes outputs to the specified output directory."""
   ranking_scores = []
@@ -622,7 +614,6 @@ def write_outputs(
           inference_result=result,
           output_dir=sample_dir,
           name=f'{job_name}_seed-{seed}_sample-{sample_idx}',
-          compress=compress_large_output_files,
       )
       ranking_score = float(result.metadata['ranking_score'])
       ranking_scores.append((seed, sample_idx, ranking_score))
@@ -655,7 +646,6 @@ def write_outputs(
         # The output terms of use are the same for all seeds/samples.
         terms_of_use=output_terms,
         name=job_name,
-        compress=compress_large_output_files,
     )
     # Save csv of ranking scores with seeds and sample indices, to allow easier
     # comparison of ranking scores across different runs.
@@ -691,7 +681,6 @@ def replace_db_dir(path_with_db_dir: str, db_dirs: Sequence[str]) -> str:
 def process_fold_input(
     fold_input: folding_input.Input,
     data_pipeline_config: pipeline.DataPipelineConfig | None,
-    *,
     model_runner: None,
     output_dir: os.PathLike[str] | str,
     buckets: Sequence[int] | None = None,
@@ -699,7 +688,6 @@ def process_fold_input(
     conformer_max_iterations: int | None = None,
     resolve_msa_overlaps: bool = True,
     force_output_dir: bool = False,
-    compress_large_output_files: bool = False,
 ) -> folding_input.Input:
   ...
 
@@ -708,7 +696,6 @@ def process_fold_input(
 def process_fold_input(
     fold_input: folding_input.Input,
     data_pipeline_config: pipeline.DataPipelineConfig | None,
-    *,
     model_runner: ModelRunner,
     output_dir: os.PathLike[str] | str,
     buckets: Sequence[int] | None = None,
@@ -716,7 +703,6 @@ def process_fold_input(
     conformer_max_iterations: int | None = None,
     resolve_msa_overlaps: bool = True,
     force_output_dir: bool = False,
-    compress_large_output_files: bool = False,
 ) -> Sequence[ResultsForSeed]:
   ...
 
@@ -724,7 +710,6 @@ def process_fold_input(
 def process_fold_input(
     fold_input: folding_input.Input,
     data_pipeline_config: pipeline.DataPipelineConfig | None,
-    *,
     model_runner: ModelRunner | None,
     output_dir: os.PathLike[str] | str,
     buckets: Sequence[int] | None = None,
@@ -732,7 +717,6 @@ def process_fold_input(
     conformer_max_iterations: int | None = None,
     resolve_msa_overlaps: bool = True,
     force_output_dir: bool = False,
-    compress_large_output_files: bool = False,
 ) -> folding_input.Input | Sequence[ResultsForSeed]:
   """Runs data pipeline and/or inference on a single fold input.
 
@@ -763,8 +747,6 @@ def process_fold_input(
       existing one is non-empty. Instead use the existing output directory and
       potentially overwrite existing files. If False, create a new timestamped
       output directory instead if the existing one is non-empty.
-    compress_large_output_files: If True, compress large output files (mmCIF and
-      confidences JSON) using zstandard.
 
   Returns:
     The processed fold input, or the inference results for each seed.
@@ -821,7 +803,6 @@ def process_fold_input(
         all_inference_results=all_inference_results,
         output_dir=output_dir,
         job_name=fold_input.sanitised_name(),
-        compress_large_output_files=compress_large_output_files,
     )
     output = all_inference_results
 
@@ -954,8 +935,7 @@ def main(_):
     model_runner = ModelRunner(
         config=make_model_config(
             flash_attention_implementation=typing.cast(
-                tokamax.DotProductAttentionImplementation,
-                _FLASH_ATTENTION_IMPLEMENTATION.value,
+                attention.Implementation, _FLASH_ATTENTION_IMPLEMENTATION.value
             ),
             num_diffusion_samples=_NUM_DIFFUSION_SAMPLES.value,
             num_recycles=_NUM_RECYCLES.value,
@@ -986,7 +966,6 @@ def main(_):
         conformer_max_iterations=_CONFORMER_MAX_ITERATIONS.value,
         resolve_msa_overlaps=_RESOLVE_MSA_OVERLAPS.value,
         force_output_dir=_FORCE_OUTPUT_DIR.value,
-        compress_large_output_files=_COMPRESS_LARGE_OUTPUT_FILES.value,
     )
     num_fold_inputs += 1
 
