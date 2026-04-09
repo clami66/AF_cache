@@ -142,6 +142,7 @@ process format_jobs_af3 {
                                                                 --json_dir ${json_cache} \\
                                                                 --af3_path ${params.af_cache_dir}/pipeline/af3 \\
                                                                 --flagfile ${params.af3_flagfile} \\
+                                                                --model_dir ${params.af3_model_dir} \\
                                                                 ${plist}
     """
 }
