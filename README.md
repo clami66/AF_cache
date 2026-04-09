@@ -132,6 +132,14 @@
     nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
     ```
 
+    **Running AlphaFold3**
+
+    Provided that the pipeline has been configured correctly, running AlphaFold3 is simply done with the `--af3` flag:
+
+    ```
+    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
+    ```
+
 ### Configuring the pipeline
 
 Most configuration is done within `nextflow.config`. Here, one can set up the installation paths of AF_cache, the ColabFold DBs, MMseqs2.
@@ -197,23 +205,43 @@ Depending whether the pipeline runs on an HPC sytem or locally, some parameters 
 For example: on a SLURM-based system, one could send the alignment job to a node with 8 GPUs and all AF inference jobs to single-GPU nodes. Other lighter tasks (e.g. parsing features, copying files) can be sent to CPU-only nodes, or run locally (on the front node). That would be accomplished with the following settings in `nextflow.config`:
 
 ```
-mmseqs_executor = 'slurm'
-mmseqs_executor_flags = '--account your-account-ID --gpus 8 --time 12:00:00'
+withName:'mmseqs_align' {
+    executor = 'slurm'
+    clusterOptions = '--account xxx-yyy-zzz --gpus 8 --time 12:00:00'
+}
 
-af_executor = 'slurm'
-af_executor_flags = '--account your-account-ID --gpus 1 --time 12:00:00'
+withName:'run_af2_jobs|run_af3_jobs' {
+    executor = 'slurm'
+    clusterOptions = '--account xxx-yyy-zzz --gpus 1 --time 12:00:00'
+}
 
-other_executor = 'local'
-other_executor_flags = ''
+withName:'ln_fasta|split_fasta|collect_pickles|collect_jsons' {
+    executor = 'local'
+}
+
+withName:'convert_alignments_af2|convert_alignments_af2|parse_features_af2|parse_features_af3|format_jobs_af2|format_jobs_af3' {
+    executor = 'local'
+}
 ```
 
-If all tasks are running on a local machine, one can set all executors to `local`, then edit the executor to make sure that the job queue size is not larger than the number of GPUs available on said machine. For example, if four GPUs are on a local machine:
+If all tasks are running on a local machine, all executors may be set to `local`, then edit the executor to make sure that the job queue size is not larger than the number of GPUs available on said machine. For example, if four GPUs are on a local machine:
 
 ```
 executor{
     name = "local"
     queueSize = 4
     cpus = 32
+}
+```
+
+Heavier CPU tasks to process alignments may be sent to a CPU node, e.g. through SLURM:
+
+```
+...
+
+withName:'convert_alignments_af2|convert_alignments_af2|parse_features_af2|parse_features_af3|format_jobs_af2|format_jobs_af3' {
+    executor = 'slurm'
+    clusterOptions = '--account xxx-yyy-zzz -N 1 -n 32 --time 2:00:00'
 }
 ```
 
