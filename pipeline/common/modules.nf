@@ -67,9 +67,9 @@ process mmseqs_align {
     path "alignments/"
 
     script:
-    def use_env = params.use_env ? "--use-env" : ''
-    def n_cpu = params.n_gpu > 0 ? params.n_cpus_per_gpu*params.n_gpu : params.max_cpus
-    def use_gpu = params.n_gpu > 0 ? "--gpu " : ""
+    def use_env = params.mmseqs_use_env ? "--use-env" : ''
+    def n_cpu = params.mmseqs_max_cpus
+    def use_gpu = params.mmseqs_n_gpu > 0 ? "--gpu " : ""
     """
     if ${params.test}; then
         mkdir -p alignments
