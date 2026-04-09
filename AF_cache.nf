@@ -1,10 +1,8 @@
 #!/usr/bin/env nextflow
 
-include { split_fasta; ln_fasta; mmseqs_align; } from './pipeline/common/modules'
+include { split_fasta ; ln_fasta ; mmseqs_align ; collect_pickles ; collect_jsons } from './pipeline/common/modules'
 
-process convert_alignments {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
+process convert_alignments_af2 {
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
@@ -15,13 +13,26 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/pipeline/af2/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/pipeline/af2/prepare_alignments.py ${alignments} AF_data/
     """
 }
 
-process parse_features {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
+process convert_alignments_af3 {
+    publishDir "${params.output_dir}", mode: 'copy'
+
+    input:
+    path alignments
+
+    output:
+    path "AF_data/"
+
+    script:
+    """
+    python ${params.af_cache_dir}/pipeline/af3/prepare_alignments.py ${alignments} AF_data/
+    """
+}
+
+process parse_features_af2 {
     publishDir "${params.output_dir}", mode: 'copy'
     cache 'lenient'
 
@@ -32,32 +43,51 @@ process parse_features {
     path template_mmcif_dir, stageAs: 'mmcif/*'
     path obsolete_pdbs_path, stageAs: 'obsolete/*'
     path pdb_seqres_database_path, stageAs: 'seqres/*'
-    
+
     output:
     path "pickle_cache/**.pkl.gz", emit: pkl
-    
+
     script:
     def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     # make sure that the custom installation of AF2.3 is found first
     mkdir -p pickle_cache
     python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af2_flagfile} \\
-                                                                 --output_dir $af_data \\
-                                                                 --fasta_paths $fasta \\
+                                                                 --output_dir ${af_data} \\
+                                                                 --fasta_paths ${fasta} \\
                                                                  --mmseqs2_uniref_database_path ${mmseqs_db}/uniref30_2302_db \\
                                                                  --mmseqs2_env_database_path ${mmseqs_db}/colabfold_envdb_202108_db \\
                                                                  --template_mmcif_dir ${template_mmcif_dir} \\
                                                                  --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                                                                  --pdb_seqres_database_path ${pdb_seqres_database_path} \\
-                                                                 $skip_templates \\
+                                                                 ${skip_templates} \\
                                                                  --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
                                                                  --pickle_cache pickle_cache/
     """
 }
 
-process format_af_jobs {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
+process parse_features_af3 {
+    publishDir "${params.output_dir}", mode: 'copy'
+
+    input:
+    path fasta
+    path af_data
+
+    output:
+    path "json_cache/*.json"
+
+    script:
+    """
+    mkdir -p json_cache
+    python ${params.af_cache_dir}/pipeline/af3/parse_features.py --output_dir ${af_data} \\
+                                                        --fasta_paths ${fasta} \\
+                                                        --json_cache json_cache/ \\
+                                                        --flagfile ${params.af3_flagfile} \\
+                                                        --undefok=num_diffusion_samples,model_dir
+    """
+}
+
+process format_jobs_af2 {
     publishDir "${params.output_dir}"
 
     input:
@@ -73,11 +103,11 @@ process format_af_jobs {
     path "sbatch_scripts/**.sh", emit: sh
 
     script:
-    def plist = pair_list.name != '.NO_FILE' ? "--file_list $pair_list" : ''
+    def plist = pair_list.name != '.NO_FILE' ? "--file_list ${pair_list}" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
-    python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
-                                                                        --pickle_dir $pickle_cache \\
+    python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
+                                                                        --pickle_dir ${pickle_cache} \\
                                                                         --write_fastas \\
                                                                         --af_path ${params.af_cache_dir} \\
                                                                         --flagfile ${params.af2_flagfile} \\
@@ -88,28 +118,35 @@ process format_af_jobs {
                                                                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                                                                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                                                                         --data_dir ${params.af2_data_dir} \\
-                                                                        $skip_templates \\
-                                                                        $plist
+                                                                        ${skip_templates} \\
+                                                                        ${plist}
     """
 }
 
-process collect_pickles {
+process format_jobs_af3 {
+    publishDir "${params.output_dir}"
+
     input:
-    path "pickle_cache/*"
+    path fasta
+    path json_cache
+    path pair_list
 
     output:
-    path "pickle_cache"
+    path "AF_data_multimer/", emit: 'dir'
+    path "sbatch_scripts/**.sh", emit: sh
 
     script:
+    def plist = pair_list.name != '.NO_FILE' ? "--file_list ${pair_list}" : ''
     """
-    echo "directory ready"
+    python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
+                                                                --json_dir ${json_cache} \\
+                                                                --af3_path ${params.af3_install_path} \\
+                                                                --flagfile ${params.af3_flagfile} \\
+                                                                ${plist}
     """
 }
 
 process run_af2_jobs {
-    executor = "${params.af_executor}"
-    clusterOptions "${params.af_executor_flags}"
-    
     input:
     path sbatch_script
     path cache
@@ -119,21 +156,71 @@ process run_af2_jobs {
 
     script:
     """
-    sh $sbatch_script
+    sh ${sbatch_script}
     """
 }
 
-workflow {
-    // align
-    split_fasta_path = split_fasta(file(params.fasta))
-    alignments_path = mmseqs_align(file(params.fasta), params.mmseqs_db)
-    
+process run_af3_jobs {
+    input:
+    path sbatch_script
+    path cache
+
+    script:
+    """
+    sh ${sbatch_script}
+    """
+}
+
+workflow af2 {
+    take:
+    alignments_path
+    fasta_links
+    split_fasta_path
+    pair_list
+
+    main:
     // convert
-    af_data_path = convert_alignments(alignments_path)
-    pickles = parse_features(ln_fasta(split_fasta_path).flatten(), af_data_path, params.mmseqs_db, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).pkl.collect()
+    af_data_path = convert_alignments_af2(alignments_path)
+    pickles = parse_features_af2(fasta_links, af_data_path, params.mmseqs_db, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).pkl.collect()
     pickle_cache = collect_pickles(pickles)
-    
+
     // AF
-    sbatch_scripts = format_af_jobs(split_fasta_path, pickle_cache, file(params.pair_list), params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
+    sbatch_scripts = format_jobs_af2(split_fasta_path, pickle_cache, pair_list, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
     run_af2_jobs(sbatch_scripts, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
+}
+
+workflow af3 {
+    take:
+    alignments_path
+    fasta_links
+    split_fasta_path
+    pair_list
+
+    main:
+    // convert
+    af_data_path = convert_alignments_af3(alignments_path)
+    jsons = parse_features_af3(fasta_links, af_data_path).collect()
+    json_cache = collect_jsons(jsons)
+
+    // AF
+    sbatch_scripts = format_jobs_af3(split_fasta_path, json_cache, pair_list).sh.collect().flatten()
+    run_af3_jobs(sbatch_scripts, json_cache)
+}
+
+workflow {
+    // process inputs
+    fasta = file(params.fasta)
+    pair_list = file(params.pair_list)
+    split_fasta_path = split_fasta(fasta)
+    fasta_links = ln_fasta(split_fasta_path).flatten()
+
+    // align
+    alignments_path = mmseqs_align(fasta, params.mmseqs_db)
+
+    if (params.af3) {
+        af3(alignments_path, fasta_links, split_fasta_path, pair_list)
+    }
+    else {
+        af2(alignments_path, fasta_links, split_fasta_path, pair_list)
+    }
 }

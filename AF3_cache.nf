@@ -1,10 +1,8 @@
 #!/usr/bin/env nextflow
 
-include { split_fasta; ln_fasta; mmseqs_align; } from './pipeline/common/modules'
+include { split_fasta ; ln_fasta ; mmseqs_align } from './pipeline/common/modules'
 
 process convert_alignments {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
@@ -15,36 +13,32 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/pipeline/af3/prepare_alignments.py $alignments AF_data/
+    python ${params.af_cache_dir}/pipeline/af3/prepare_alignments.py ${alignments} AF_data/
     """
 }
 
 process parse_features_af3 {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
     path fasta
     path af_data
-    
+
     output:
     path "json_cache/*.json"
-    
+
     script:
     """
     mkdir -p json_cache
-    python ${params.af_cache_dir}/pipeline/af3/parse_features.py --output_dir $af_data \\
-                                                        --fasta_paths $fasta \\
+    python ${params.af_cache_dir}/pipeline/af3/parse_features.py --output_dir ${af_data} \\
+                                                        --fasta_paths ${fasta} \\
                                                         --json_cache json_cache/ \\
                                                         --flagfile ${params.af3_flagfile} \\
-                                                        --undefok=num_diffusion_samples
+                                                        --undefok=num_diffusion_samples,model_dir
     """
 }
 
 process format_af_jobs {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}"
 
     input:
@@ -57,13 +51,13 @@ process format_af_jobs {
     path "sbatch_scripts/**.sh", emit: sh
 
     script:
-    def plist = pair_list.name != '.NO_FILE' ? "--file_list $pair_list" : ''
+    def plist = pair_list.name != '.NO_FILE' ? "--file_list ${pair_list}" : ''
     """
-    python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py $fasta AF_data_multimer/ \\
-                                                                --json_dir $json_cache \\
+    python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
+                                                                --json_dir ${json_cache} \\
                                                                 --af3_path ${params.af3_install_path} \\
                                                                 --flagfile ${params.af3_flagfile} \\
-                                                                $plist
+                                                                ${plist}
     """
 }
 
@@ -81,16 +75,13 @@ process collect_jsons {
 }
 
 process run_af3_jobs {
-    executor = "${params.af_executor}"
-    clusterOptions "${params.af_executor_flags}"
-    
     input:
     path sbatch_script
     path cache
-    
+
     script:
     """
-    sh $sbatch_script
+    sh ${sbatch_script}
     """
 }
 
@@ -98,10 +89,10 @@ workflow {
     // align
     split_fasta_path = split_fasta(file(params.fasta))
     alignments_path = mmseqs_align(file(params.fasta), params.mmseqs_db)
-    
+    fasta_links = ln_fasta(split_fasta_path).flatten()
     // convert
     af_data_path = convert_alignments(alignments_path)
-    jsons = parse_features_af3(ln_fasta(split_fasta_path).flatten(), af_data_path).collect()
+    jsons = parse_features_af3(fasta_links, af_data_path).collect()
     json_cache = collect_jsons(jsons)
 
     // AF

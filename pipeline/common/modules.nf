@@ -1,7 +1,5 @@
 
 process split_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
@@ -18,8 +16,6 @@ process split_fasta {
 }
 
 process ln_fasta {
-    executor = "${params.other_executor}"
-    clusterOptions = "${params.other_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
@@ -34,9 +30,33 @@ process ln_fasta {
     """
 }
 
+process collect_pickles {
+    input:
+    path "pickle_cache/*"
+
+    output:
+    path "pickle_cache"
+
+    script:
+    """
+    echo "directory ready"
+    """
+}
+
+process collect_jsons {
+    input:
+    path "json_cache/*"
+
+    output:
+    path "json_cache"
+
+    script:
+    """
+    echo "directory ready"
+    """
+}
+
 process mmseqs_align {
-    executor = "${params.mmseqs_executor}"
-    clusterOptions "${params.mmseqs_executor_flags}"
     publishDir "${params.output_dir}", mode: 'copy'
     
     input:
