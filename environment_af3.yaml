@@ -1,0 +1,13 @@
+name: AF3_cache
+channels:
+  - conda-forge
+  - nvidia
+  - bioconda
+dependencies:
+  - python==3.12
+  - hmmer=3.4
+  - cuda-nvcc
+  - pip
+  - pip:
+    - biopython==1.87
+    - git+https://github.com/google-deepmind/alphafold3.git
