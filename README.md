@@ -1,6 +1,6 @@
-# Efficiently run all-vs-all dimer predictions with AF_cache and mmseqs2
+# AF_cache: fast inference of AlphaFold2 / AlphaFold3 predictions in large-scale studies
 
-## Installing AF_cache
+## Setup
 
 1. [Install nextflow](https://www.nextflow.io/docs/latest/install.html)
 
@@ -9,7 +9,7 @@
     mv nextflow ~/bin/
     ```
 
-3. Clone this repository and export the install path as follows:
+2. Clone this repository and export the install path as follows:
    ```bash
    git clone git@github.com:clami66/AF_cache.git
    cd AF_cache/
@@ -19,186 +19,178 @@
    source ~/.bashrc
    ```
 
-4. Install MMseqs2 (for GPU or CPU) as follows:
-   ```bash
-   # GPU version:
-   wget https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz
-   tar xvfz mmseqs-linux-gpu.tar.gz
-   echo "export PATH=$(pwd)/mmseqs/bin/:$PATH" >> ~/.bashrc
-
-   # Non-GPU version:
-   # wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz
-   # tar xvfz mmseqs-linux-avx2.tar.gz
-   # echo "export PATH=$(pwd)/mmseqs/bin/:$PATH" >> ~/.bashrc
-   ```
-
-5. Download and setup ColabFold DBs, including AlphaFold PDB DBs (script adapted from [here](https://colabfold.mmseqs.com/))
-
-    ```bash
-    chmod +x setup_databases.sh
-    # If you want to use GPU acceleration during the searches:
-    GPU=1 ./setup_databases.sh database/
-    # If you DO NOT want to use GPU acceleration during the searches:
-    # ./setup_databases.sh database/
-    ```
-
-6. Install the environments necessary to run AlphaFold and MMseqs2. This can be done in multiple ways:
-   <details>
-   <summary>Using Docker</summary>
-
-   If you wish to use our Docker container, just open `nextflow.config` in the main repository folder and enable `docker` while disabling `apptainer` and `conda`:
-   ```
-   docker {
-        enabled = true
-        runOptions = "--gpus all"
-    }
-   
-   apptainer {
-        enabled = false
-        runOptions = "--nv"
-    }
-
-    conda {
-        enabled = false
-        useMamba = true
-        cacheDir = "$AF_CACHE/conda"
-    }
-   ```
-
-   Then, run the pipeline for the first time and the correct image will be pulled by nextflow.
-   </details>
-   <details>
-   <summary>Using Apptainer</summary>
-
-   If you wish to use Apptainer, just open `nextflow.config` in the main repository folder and enable `apptainer` while disabling `docker` and `conda`:
-   ```
-   docker {
-        enabled = false
-        runOptions = "--gpus all"
-    }
-   
-   apptainer {
-        enabled = true
-        runOptions = "--nv"
-    }
-
-    conda {
-        enabled = false
-        useMamba = true
-        cacheDir = "$AF_CACHE/conda"
-    }
-   ```
-
-   Then, run the pipeline for the first time and the correct image will be pulled by nextflow. You can specify where the `.sif` container image will be downloaded by setting the `NXF_APPTAINER_CACHEDIR` ennvar as desired.
-   </details>
-   <details>
-   <summary>Using conda/mamba</summary>
-
-   If you wish to use conda or mamba:
-
-   Make sure that the `mmseqs` binary path is correctly set inside `nextflow.config`. If you installed MMseqs2 inside the main repo directory, it should already be correct:
-
-   ```
-   mmseqs_bin = "$AF_CACHE/mmseqs/bin/mmseqs"
-   ```
-
-   Then, enable conda inside `nextflow.config`. If mamba is installed on the system, then it can be enabled with `useMamba`:
-   ```
-   docker {
-        enabled = false
-        runOptions = "--gpus all"
-    }
-   
-   apptainer {
-        enabled = false
-        runOptions = "--nv"
-    }
-
-    conda {
-        enabled = true
-        useMamba = false
-        cacheDir = "$AF_CACHE/conda"
-    }
-   ```
-   Lastly, running the pipeline for the first time will install the conda env automatically.
-   
-   The default environment installation path can be changed with `cacheDir`.
-   </details>   
-
-6. Test the pipeline
-
+3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs/tools. This could take a few hours the first time you run the pipeline.
     ```
     # add --test to skip the alignment step
     nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
     ```
 
-    **Running AlphaFold3**
+* **The pipeline uses Docker containers to automatically get all the requirements. Alternatively, apptainer or conda can also be used. See below to configure this behavior.**
 
-    Provided that the pipeline has been configured correctly, running AlphaFold3 is simply done with the `--af3` flag:
+* **The pipeline automatically installs ColabFold MSA DBs and AlphaFold2 PDB template DBs. If these are already present on the system, this step can be skipped. See below to configure this behavior.**
 
-    ```
-    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
-    ```
+### Pipeline inputs
 
-### Configuring the pipeline
-
-Most configuration is done within `nextflow.config`. Here, one can set up the installation paths of AF_cache, the ColabFold DBs, MMseqs2.
-
-#### Installation paths
-
-If the installation instructions were followed exactly, there is no need to change these:
+The input to a pipeline is a single `.fasta` file containing all the sequences for a large-scale experiment:
 
 ```
-# necessary to export AF_CACHE install path
-af_cache_dir = "$AF_CACHE"
-mmseqs_db = "$AF_CACHE/database/"
-mmseqs_bin = "$AF_CACHE/mmseqs/bin/mmseqs"
+cat fasta_seqs/*.fasta > all_seqs.fasta
 ```
 
-If the DBs and MMseqs2 were installed in some other location, the parameters need to be adjusted accordingly.
-
-#### AlphaFold parameters
-
-Other parameters can be adjusted to change the behavior of AlphaFold2, or to point to an existing installation of AlphaFold2/AlphaFold3.
+The workflow will take this single fasta file as input:
 
 ```
-// af2 parameters
-af2_data_dir = "/path/to/af2/parameters"
-af2_flagfile = "$AF_CACHE/flags/multimer.flag"
-template_mmcif_dir = "$AF_CACHE/database/pdb_mmcif/mmcif_files"
-obsolete_pdbs_path = "$AF_CACHE/database/pdb_mmcif/obsolete.dat"
-pdb_seqres_database_path = "$AF_CACHE/database/pdb_seqres/pdb_seqres.txt"
+# -resume avoids re-running completed steps if the job crashed
+nextflow AF_cache.nf --fasta all_seqs.fasta -resume
+```
 
-// af3 parameters
-af3_dir = '/path/to/your/af3/installation/'
+### Subsetting pairs, running multimers (trimers, etc.)
+
+By default, the pipeline produces predictions for all-vs-all pairs of sequences in the input fasta.
+
+To restrict the interactions to a list of `prot1 prot2` pairs, use the parameter `--pair_list`. Even though the pipeline is thought for dimer interactions, more than two partners can be specified:
+    
+```
+$ head multimers_list 
+YP00901869113 YP00901869113
+YP00901869012 YP00901869012 YP00901869113
 ...
+
+# will generate predictions for one homodimer and one heterotrimer:
+nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
 ```
 
-The flagfiles (`af_flagfile`, `af3_flagfile` etc.) are a convenient place to store all the necessary flags to set up AlphaFold inference runs. In this repo, we have a set of predefined flagfiles (inside `flags/`).
+## Other configuration options
 
-**Templates**
+The pipeline's behavior can be customized depending on what is available on the host system. Most configuration is done within `nextflow.config`:
 
-If the databases were installed as specified above, the template DB paths should already be correct inside `nextflow.config`
+<details>
+<summary>Using apptainer/singularity instead of Docker</summary>
+
+If you wish to use Apptainer, edit `nextflow.config` in the main repository folder and enable `apptainer` while disabling `docker` and `conda`:
+```
+docker {
+    enabled = false
+    runOptions = "--gpus all"
+}
+
+apptainer {
+    enabled = true
+    runOptions = "--nv"
+}
+
+conda {
+    enabled = false
+    useMamba = true
+    cacheDir = "$AF_CACHE/conda"
+    createTimeout = '1 h'
+}
+```
+
+Then, run the pipeline for the first time and the correct image will be pulled by nextflow. You can specify where the `.sif` container image will be downloaded by setting the `NXF_APPTAINER_CACHEDIR` ennvar as desired.
+
+</details>
+<details>
+<summary>Using conda/mamba instead of Docker</summary>
+
+If you wish to use conda or mamba, enable conda inside `nextflow.config` and disable docker and apptainer. If mamba is installed on the system, it can be enabled with `useMamba`:
 
 ```
-skip_templates = false
-template_mmcif_dir = "$AF_CACHE/database/pdb_mmcif/mmcif_files"
-obsolete_pdbs_path = "$AF_CACHE/database/pdb_mmcif/obsolete.dat"
-pdb_seqres_database_path = "$AF_CACHE/database/pdb_seqres/pdb_seqres.txt"
+docker {
+    enabled = false
+    runOptions = "--gpus all"
+}
+
+apptainer {
+    enabled = false
+    runOptions = "--nv"
+}
+
+conda {
+    enabled = true
+    useMamba = false
+    cacheDir = "$AF_CACHE/conda"
+    createTimeout = '1 h'
+}
 ```
 
-But they can also point to DBs from a previous installation of AlphaFold2.
+Running the pipeline for the first time will install the conda env automatically.
 
-If the pipeline should run without templates, that can be done by setting the `skip_templates` parameter. In tthat case, the template DB paths are not necessary and can be defined as `no_file`:
+The default environment installation path can be changed with `cacheDir`.
+</details>   
+<details>
+<summary>Running AlphaFold3</summary>
+AlphaFold3 can be run by simply adding the `--af3` flag:
+
+```
+nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
+```
+This will automatically install the necessary environment, according to the docker/apptainer/conda preferences described above.
+
+**Notice: the AF3 docker container is not maintained by us.**
+</details>
+
+<details>
+<summary>Skipping templates</summary>
+The template step in the pipeline can be enabled/skipped, either by permanently setting `skip_template` inside `nextflow.config`:
 
 ```
 skip_templates = true
-template_mmcif_dir = no_file
-obsolete_pdbs_path = no_file
-pdb_seqres_database_path = no_file
 ```
 
-#### Scheduling and resource management
+By default, templates are always skipped. This will also avoid downloading the template DBs the first time the pipeline is run.
+
+Like all `params` options, this behavior can be changed at runtime:
+```
+nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --skip_templates=false
+```
+</details>
+
+<details>
+<summary>ColabFold DBs are already on the system</summary>
+If the ColabFold DBs have been downloaded through the original ColabFold setup script, these can be reused so that the pipeline doesn't download an extra copy. This can be done by pointing the `database` directory inside `nextflow.config` to the right location:
+
+```
+mmseqs_db = "/path/to/ColabFold/DB"
+```
+The directory should contain the files `DOWNLOADS_READY`, `UNIREF30_READY`, `COLABDB_READY`. The pipeline will look for these files to skip the download step.
+</details>
+
+<details>
+<summary>AlphaFold2 template DBs are already on the system</summary>
+If template DBs (`pdb_mmcif`, `pdb_seqres`) are already on the system, these can be used to avoid downloading an extra copy. 
+    
+1. Set the correct paths inside `nextflow.config`
+```
+template_mmcif_dir = "/path/to/pdb_mmcif/mmcif_files"
+obsolete_pdbs_path = "/path/to/pdb_mmcif/obsolete.dat"
+pdb_seqres_database_path = "/path/to/pdb_seqres/pdb_seqres.txt"
+```
+2. Make sure you add an empty file called `PDB_MMCIF_READY` inside the directory of the ColabFold DBs (`mmseqs_db = "/path/to/ColabFold/DB"`). This will avoid triggering a new download of the DBs.
+   
+</details>
+
+<details>
+<summary>AlphaFold2/AlphaFold3 configuration</summary>
+
+AlphaFold2 and/or AlphaFold3 parameters should be on the system, according to the respective installation instructions. Simply point the pipeline to the parameter file locations inside `nextflow.config`:
+
+```
+af2_data_dir = '/path/to/alphafold2_data/'
+af3_model_dir = '/path/to/af3_model_parameters/'
+```
+
+Other behaviors for AF2 and AF3 (number of recycles, number of seeds etc.) should be set inside the flagfiles provided inside `flags/af2.flag` and `flags/af3.flag`. For example, to change the number of recycles inside AF2 and use two NN models, `flags/af2.flag` might look as follows:
+
+```
+--max_recycles=3
+--models_to_use=model_1_multimer_v3,models_2_multimer_v3
+```
+
+</details>
+<details>
+
+<summary>Job scheduling and resource management</summary>
 
 Depending whether the pipeline runs on an HPC sytem or locally, some parameters can be varied to send jobs to different schedulers or to run them on local CPU/GPU resourcers.
 
@@ -247,34 +239,9 @@ withName:'convert_alignments_af2|convert_alignments_af2|parse_features_af2|parse
 
 Consult the Nextlow docs for more information about setting up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
 
-### Running the pipeline
+</details>
 
-1. Concatenate all fasta sequences into a single file:
-
-    ```
-    cat fasta_seqs/*.fasta > all_seqs.fasta
-    ```
-
-3. Launch the Nextflow workflow:
-
-    ```
-    # -resume avoids re-running completed steps if the job crashed
-    nextflow AF_cache.nf --fasta all.fasta -resume
-    ```
-
-    To restrict the interactions to a list of `prot1 prot2` pairs, use the parameter `--pair_list`. Even though the pipeline is thought for dimer interactions, more than two partners can be specified:
-    
-    ```
-    $ head multimers_list 
-    YP00901869113 YP00901869113
-    YP00901869012 YP00901869012 YP00901869113
-    ...
-    
-    # will generate predictions for one homodimer and one heterotrimer:
-    nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
-    ```
-
-## Running alignments and other steps separately (not recommended)
+## Running pipeline steps separately (deprecated)
 
 1. Run alignments with MMseqs2
 
