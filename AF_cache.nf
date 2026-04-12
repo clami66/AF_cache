@@ -94,6 +94,7 @@ process format_jobs_af2 {
     path fasta
     path pickle_cache
     path pair_list
+    path af2_data_dir
     path template_mmcif_dir, stageAs: 'mmcif/*'
     path obsolete_pdbs_path, stageAs: 'obsolete/*'
     path pdb_seqres_database_path, stageAs: 'seqres/*'
@@ -117,7 +118,7 @@ process format_jobs_af2 {
                                                                         --template_mmcif_dir ${template_mmcif_dir} \\
                                                                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                                                                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
-                                                                        --data_dir ${params.af2_data_dir} \\
+                                                                        --data_dir ${af2_data_dir} \\
                                                                         ${skip_templates} \\
                                                                         ${plist}
     """
@@ -172,6 +173,20 @@ process run_af3_jobs {
     """
 }
 
+process get_af2_params {
+    output:
+    path ".af2_params_ready"
+
+    script:
+    """
+    if ! ls ${params.af2_data_dir}/params/params*.npz 1> /dev/null 2>&1; then
+        ${params.af_cache_dir}/pipeline/af2/download_alphafold_params.sh ${params.af2_data_dir}
+    fi
+
+    touch .af2_params_ready
+    """
+}
+
 workflow af2 {
     take:
     alignments_path
@@ -186,7 +201,8 @@ workflow af2 {
     pickle_cache = collect_pickles(pickles)
 
     // AF
-    sbatch_scripts = format_jobs_af2(split_fasta_path, pickle_cache, pair_list, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
+    af2_data_dir = get_af2_params()
+    sbatch_scripts = format_jobs_af2(split_fasta_path, pickle_cache, pair_list, af2_data_dir, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
     run_af2_jobs(sbatch_scripts, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
 }
 
