@@ -229,15 +229,16 @@ workflow {
     fasta = file(params.fasta)
     pair_list = file(params.pair_list)
     split_fasta_path = split_fasta(fasta)
-    fasta_links = ln_fasta(split_fasta_path).flatten()    
+    fasta_links = ln_fasta(split_fasta_path).flatten()
 
     // align
     db_ready = setup_mmseqs2_dbs()
     alignments_path = mmseqs_align(fasta, params.mmseqs_db, db_ready)
-    
-    if ( params.af3 ) {
+
+    if (params.af3) {
         af3(alignments_path, fasta_links, split_fasta_path, pair_list)
-    } else {
+    }
+    else {
         af2(alignments_path, fasta_links, split_fasta_path, pair_list)
     }
 }

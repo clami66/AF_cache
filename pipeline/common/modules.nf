@@ -30,7 +30,7 @@ process split_fasta {
     script:
     """
     mkdir -p split_fasta/
-    python ${params.af_cache_dir}/pipeline/common/split_fasta.py $fasta split_fasta/
+    python ${params.af_cache_dir}/pipeline/common/split_fasta.py ${fasta} split_fasta/
     """
 }
 
@@ -45,7 +45,7 @@ process ln_fasta {
 
     script:
     """
-    ln -s $fasta fasta
+    ln -s ${fasta} fasta
     """
 }
 
@@ -77,7 +77,7 @@ process collect_jsons {
 
 process mmseqs_align {
     publishDir "${params.output_dir}", mode: 'copy'
-    
+
     input:
     path fasta
     path mmseqs_db
@@ -95,13 +95,12 @@ process mmseqs_align {
         mkdir -p alignments
         cp ${params.af_cache_dir}/test_data/alignments/*.a3m alignments/
     else
-        python ${params.af_cache_dir}/pipeline/common/run_msa_tool.py $fasta \\
+        python ${params.af_cache_dir}/pipeline/common/run_msa_tool.py ${fasta} \\
                                                                        mmseqs2 ${mmseqs_db}/ \\
                                                                        --out_dir ./ \\
-                                                                       --n_cpu $n_cpu \\
-                                                                       $use_gpu \\
-                                                                       $use_env
+                                                                       --n_cpu ${n_cpu} \\
+                                                                       ${use_gpu} \\
+                                                                       ${use_env}
     fi
     """
 }
-
