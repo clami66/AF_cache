@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-include { split_fasta ; ln_fasta ; mmseqs_align ; collect_pickles ; collect_jsons } from './pipeline/common/modules'
+include { split_fasta ; ln_fasta ; mmseqs_align ; collect_pickles ; collect_jsons ; setup_mmseqs2_dbs } from './pipeline/common/modules'
 
 process convert_alignments_af2 {
     publishDir "${params.output_dir}", mode: 'copy'
@@ -216,7 +216,8 @@ workflow {
     fasta_links = ln_fasta(split_fasta_path).flatten()    
 
     // align
-    alignments_path = mmseqs_align(fasta, params.mmseqs_db)
+    db_ready = setup_mmseqs2_dbs()
+    alignments_path = mmseqs_align(fasta, params.mmseqs_db, db_ready)
     
     if ( params.af3 ) {
         af3(alignments_path, fasta_links, split_fasta_path, pair_list)

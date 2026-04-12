@@ -1,3 +1,22 @@
+process setup_mmseqs2_dbs {
+    output:
+    path ".databases_ready"
+
+    script:
+    def gpu_var = params.mmseqs_n_gpu > 0 ? 'GPU=1' : 'GPU=0'
+    def template_var = params.skip_templates ? 'SKIP_TEMPLATES=1' : ''
+    """
+    if [[ ! -e "${params.mmseqs_db}" ]]; then
+        mkdir -p "${params.mmseqs_db}"
+    fi
+
+    if [[ ! -e "${params.mmseqs_db}/PDB_MMCIF_READY" ]] || [[ ! -e "${params.mmseqs_db}/UNIREF30_READY" ]] || [[ ! -e "${params.mmseqs_db}/COLABDB_READY" ]]; then
+        ${gpu_var} ${template_var} FAST_PREBUILT_DATABASES=1 ${params.af_cache_dir}/pipeline/common/setup_databases.sh ${params.mmseqs_db}
+    fi
+
+    touch .databases_ready
+    """
+}
 
 process split_fasta {
     publishDir "${params.output_dir}", mode: 'copy'
@@ -62,7 +81,8 @@ process mmseqs_align {
     input:
     path fasta
     path mmseqs_db
-    
+    path db_ready
+
     output:
     path "alignments/"
 
