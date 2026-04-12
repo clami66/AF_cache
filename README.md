@@ -65,58 +65,19 @@ nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
 The pipeline's behavior can be customized depending on what is available on the host system. Most configuration is done within `nextflow.config`:
 
 <details>
-<summary>Using apptainer/singularity instead of Docker</summary>
+<summary>Choosing between Docker, apptainer/singularity and conda</summary>
 
-If you wish to use Apptainer, edit `nextflow.config` in the main repository folder and enable `apptainer` while disabling `docker` and `conda`:
+The pipeline uses Docker containers to automatically get all the requirements. Alternatively, apptainer or conda can also be used by running different profiles:
+
+Apptainer/singularity:
 ```
-docker {
-    enabled = false
-    runOptions = "--gpus all"
-}
-
-apptainer {
-    enabled = true
-    runOptions = "--nv"
-}
-
-conda {
-    enabled = false
-    useMamba = true
-    cacheDir = "$AF_CACHE/conda"
-    createTimeout = '1 h'
-}
+nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -profile apptainer
+```
+Conda/Mamba:
+```
+nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -profile conda
 ```
 
-Then, run the pipeline for the first time and the correct image will be pulled by nextflow. You can specify where the `.sif` container image will be downloaded by setting the `NXF_APPTAINER_CACHEDIR` ennvar as desired.
-
-</details>
-<details>
-<summary>Using conda/mamba instead of Docker</summary>
-
-If you wish to use conda or mamba, enable conda inside `nextflow.config` and disable docker and apptainer. If mamba is installed on the system, it can be enabled with `useMamba`:
-
-```
-docker {
-    enabled = false
-    runOptions = "--gpus all"
-}
-
-apptainer {
-    enabled = false
-    runOptions = "--nv"
-}
-
-conda {
-    enabled = true
-    useMamba = false
-    cacheDir = "$AF_CACHE/conda"
-    createTimeout = '1 h'
-}
-```
-
-Running the pipeline for the first time will install the conda env automatically.
-
-The default environment installation path can be changed with `cacheDir`.
 </details>   
 <details>
 <summary>Running AlphaFold3</summary>
