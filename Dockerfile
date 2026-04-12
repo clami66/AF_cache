@@ -32,6 +32,8 @@ RUN apt-get update --quiet \
         kalign \
         tzdata \
         wget \
+        aria2 \
+        rsync \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove --yes \
     && apt-get clean
@@ -69,9 +71,10 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 
 RUN wget -q https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz \
     && tar xvfz mmseqs-linux-gpu.tar.gz -C /app/alphafold/ \
-    && rm mmseqs-linux-gpu.tar.gz \
-    && export PATH=/app/alphafold/mmseqs/bin/:$PATH
-  
+    && rm mmseqs-linux-gpu.tar.gz
+
+ENV PATH="/app/alphafold/mmseqs/bin/:$PATH"
+
 # Install pip packages.
 RUN pip3 install --upgrade pip --no-cache-dir \
     && pip3 install -r /app/alphafold/docker/requirements.txt --no-cache-dir
