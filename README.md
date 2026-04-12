@@ -9,7 +9,7 @@
     mv nextflow ~/bin/
     ```
 
-2. Clone this repository and export the install path as follows:
+2. Clone this repository:
    ```bash
    git clone git@github.com:clami66/AF_cache.git
    ```
