@@ -78,7 +78,30 @@ Conda/Mamba:
 nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -profile conda
 ```
 
-</details>   
+</details>
+<details>
+<summary>AlphaFold2/AlphaFold3 configuration</summary>
+
+AlphaFold2 parameters will be downloaded automatically by the pipeline. If they are already on the system, simply point the pipeline to the parameter file locations inside `nextflow.config`:
+
+```
+af2_data_dir = '/path/to/alphafold2_data/'
+```
+
+AlphaFold3 parameters must be downloaded manually. The parameter location can be configured in the following line in `nextflow.config`:
+
+```
+af3_model_dir = '/path/to/af3_model_parameters/'
+```
+
+Other behaviors for AF2 and AF3 (number of recycles, number of seeds etc.) should be set inside the flagfiles provided inside `flags/af2.flag` and `flags/af3.flag`. For example, to change the number of recycles inside AF2 and use two NN models, `flags/af2.flag` might look as follows:
+
+```
+--max_recycles=3
+--models_to_use=model_1_multimer_v3,models_2_multimer_v3
+```
+
+</details>
 <details>
 <summary>Running AlphaFold3</summary>
 AlphaFold3 can be run by simply adding the `--af3` flag:
@@ -111,7 +134,7 @@ nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --skip_templates=false
 </details>
 
 <details>
-<summary>ColabFold DBs are already on the system</summary>
+<summary>Using ColabFold DBs that are already on the system</summary>
 If the ColabFold DBs have been downloaded through the original ColabFold setup script, these can be reused so that the pipeline doesn't download an extra copy. This can be done by pointing the `database` directory inside `nextflow.config` to the right location:
 
 ```
@@ -121,7 +144,7 @@ The directory should contain the files `DOWNLOADS_READY`, `UNIREF30_READY`, `COL
 </details>
 
 <details>
-<summary>AlphaFold2 template DBs are already on the system</summary>
+<summary>Using AlphaFold2 template DBs that are already on the system</summary>
 If template DBs (`pdb_mmcif`, `pdb_seqres`) are already on the system, these can be used to avoid downloading an extra copy. 
     
 1. Set the correct paths inside `nextflow.config`
@@ -134,29 +157,6 @@ pdb_seqres_database_path = "/path/to/pdb_seqres/pdb_seqres.txt"
    
 </details>
 
-<details>
-<summary>AlphaFold2/AlphaFold3 configuration</summary>
-
-AlphaFold2 parameters will be downloaded automatically by the pipeline. If they are already on the system, simply point the pipeline to the parameter file locations inside `nextflow.config`:
-
-```
-af2_data_dir = '/path/to/alphafold2_data/'
-```
-
-AlphaFold3 parameters must be downloaded manually. The parameter location can be configured in the following line in `nextflow.config`:
-
-```
-af3_model_dir = '/path/to/af3_model_parameters/'
-```
-
-Other behaviors for AF2 and AF3 (number of recycles, number of seeds etc.) should be set inside the flagfiles provided inside `flags/af2.flag` and `flags/af3.flag`. For example, to change the number of recycles inside AF2 and use two NN models, `flags/af2.flag` might look as follows:
-
-```
---max_recycles=3
---models_to_use=model_1_multimer_v3,models_2_multimer_v3
-```
-
-</details>
 <details>
 
 <summary>Job scheduling and resource management</summary>
