@@ -89,7 +89,8 @@ nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
 This will automatically install the necessary environment, according to the docker/apptainer/conda preferences described above.
 
 **Notice: the AF3 docker container is not maintained by us.**
-**Notice: the AF3 parameters must be downloaded by the user according to the [official docs](https://github.com/google-deepmind/alphafold3?tab=readme-ov-file#obtaining-model-parameters).**
+
+**Notice: the AF3 parameters must be downloaded by the user according to the [official docs](https://github.com/google-deepmind/alphafold3?tab=readme-ov-file#obtaining-model-parameters)**
 
 </details>
 
