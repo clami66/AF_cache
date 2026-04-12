@@ -90,7 +90,7 @@ if [ ! -f DOWNLOADS_READY ]; then
   touch DOWNLOADS_READY
 fi
 
-if [ ! -f PDB_MMCIF_READY ] && [ ! -f SKIP_TEMPLATES ]; then
+if [ ! -f PDB_MMCIF_READY ] && [ ! -n SKIP_TEMPLATES ]; then
   RAW_DIR="pdb_mmcif/raw"
   MMCIF_DIR="pdb_mmcif/mmcif_files"
   SEQRES_DIR="pdb_seqres/"
