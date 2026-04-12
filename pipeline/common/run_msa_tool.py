@@ -38,7 +38,7 @@ n_iter = args.n_iter
 
 if not args.max_hits:
     if alignment_type == "mgnify":
-        max_hits = 501 
+        max_hits = 501
     elif alignment_type in ["uniprot", "mmseqs", "mmseqs2"]:
         max_hits = None
     else:
@@ -65,7 +65,7 @@ elif alignment_type in ["mmseqs", "mmseqs2"]:
                                 gpu_server=args.gpu_server,
                                 max_accept=args.max_accept,
                                 )
-    
+
 
 msa_format = "a3m" if alignment_type in ["uniref30", "bfd", "mmseqs", "mmseqs2"] else "sto"
 msa_out_file = f"{alignment_type}_hits.{msa_format}"
