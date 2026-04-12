@@ -97,6 +97,7 @@ process mmseqs_align {
     else
         python ${params.af_cache_dir}/pipeline/common/run_msa_tool.py ${fasta} \\
                                                                        mmseqs2 ${mmseqs_db}/ \\
+                                                                       --mmseqs ${params.mmseqs_bin} \\
                                                                        --out_dir ./ \\
                                                                        --n_cpu ${n_cpu} \\
                                                                        ${use_gpu} \\
