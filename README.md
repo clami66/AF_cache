@@ -12,16 +12,11 @@
 2. Clone this repository and export the install path as follows:
    ```bash
    git clone git@github.com:clami66/AF_cache.git
-   cd AF_cache/
-
-   # export installation path to bash profile, change accordingly if using e.g. zsh
-   echo "export AF_CACHE=$(pwd)" >> ~/.bashrc
-   source ~/.bashrc
    ```
 
 3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters. This could take a few hours the first time you run the pipeline.
     ```
-    # add --test to skip the alignment step
+    cd AF_cache/
     nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
     ```
 
@@ -155,6 +150,16 @@ pdb_seqres_database_path = "/path/to/pdb_seqres/pdb_seqres.txt"
 ```
 2. Make sure you add an empty file called `PDB_MMCIF_READY` inside the directory of the ColabFold DBs (`mmseqs_db = "/path/to/ColabFold/DB"`). This will avoid triggering a new download of the DBs.
    
+</details>
+
+<details>
+<summary>Using a local installation of MMseqs2</summary>
+Binaries compiled on a system can be faster than precompiled ones. So, if an installation of MMseqs2 is already present on the system, that can be used instead of the docker/apptainer/conda version by pointing to the MMseqs2 binary in `nextflow.config`:
+
+```
+mmseqs_bin = "/path/to/bin/mmseqs"
+```
+
 </details>
 
 <details>
