@@ -19,7 +19,7 @@
    source ~/.bashrc
    ```
 
-3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs/tools. This could take a few hours the first time you run the pipeline.
+3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters. This could take a few hours the first time you run the pipeline.
     ```
     # add --test to skip the alignment step
     nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
@@ -27,7 +27,7 @@
 
 * **The pipeline uses Docker containers to automatically get all the requirements. Alternatively, apptainer or conda can also be used. See below to configure this behavior.**
 
-* **The pipeline automatically installs ColabFold MSA DBs and AlphaFold2 PDB template DBs. If these are already present on the system, this step can be skipped. See below to configure this behavior.**
+* **The pipeline automatically installs ColabFold MSA DBs, AlphaFold2 PDB template DBs and AlphaFold2 parameters. If these are already present on the system, this step can be skipped. See below to configure this behavior.**
 
 ### Pipeline inputs
 
@@ -89,6 +89,8 @@ nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
 This will automatically install the necessary environment, according to the docker/apptainer/conda preferences described above.
 
 **Notice: the AF3 docker container is not maintained by us.**
+**Notice: the AF3 parameters must be downloaded by the user according to the [official docs](https://github.com/google-deepmind/alphafold3?tab=readme-ov-file#obtaining-model-parameters).**
+
 </details>
 
 <details>
@@ -134,10 +136,15 @@ pdb_seqres_database_path = "/path/to/pdb_seqres/pdb_seqres.txt"
 <details>
 <summary>AlphaFold2/AlphaFold3 configuration</summary>
 
-AlphaFold2 and/or AlphaFold3 parameters should be on the system, according to the respective installation instructions. Simply point the pipeline to the parameter file locations inside `nextflow.config`:
+AlphaFold2 parameters will be downloaded automatically by the pipeline. If they are already on the system, simply point the pipeline to the parameter file locations inside `nextflow.config`:
 
 ```
 af2_data_dir = '/path/to/alphafold2_data/'
+```
+
+AlphaFold3 parameters must be downloaded manually. The parameter location can be configured in the following line in `nextflow.config`:
+
+```
 af3_model_dir = '/path/to/af3_model_parameters/'
 ```
 
