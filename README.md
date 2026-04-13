@@ -11,18 +11,18 @@
 
 2. Clone this repository:
    ```bash
-   git clone git@github.com:clami66/AF_cache.git
+   git clone https://github.com/clami66/AF_cache.git
    ```
 
-3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters. This could take a few hours the first time you run the pipeline.
+3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters (could take a few hours to set up).
     ```
     cd AF_cache/
     nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
     ```
 
-* **The pipeline uses Docker containers to automatically get all the requirements. Alternatively, apptainer or conda can also be used. See below to configure this behavior.**
+* **The pipeline uses Docker containers to automatically install dependencies. Alternatively, apptainer or conda can also be used. [See below](https://github.com/clami66/AF_cache/tree/main?tab=readme-ov-file#other-configuration-options) to configure this behavior.**
 
-* **The pipeline automatically installs ColabFold MSA DBs, AlphaFold2 PDB template DBs and AlphaFold2 parameters. If these are already present on the system, this step can be skipped. See below to configure this behavior.**
+* **The pipeline automatically installs ColabFold MSA DBs, AlphaFold2 PDB template DBs and AlphaFold2 parameters. If these are already present on the system, this step can be skipped. [See below](https://github.com/clami66/AF_cache/tree/main?tab=readme-ov-file#other-configuration-options) to configure this behavior.**
 
 ### Pipeline inputs
 
@@ -53,6 +53,29 @@ YP00901869012 YP00901869012 YP00901869113
 
 # will generate predictions for one homodimer and one heterotrimer:
 nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
+```
+
+### Resuming runs
+
+Runs are automatically cached by nextflow so that intermediate results can be reused in case of crashes, or if the user changes some settings. Just use the `-resume` flag to resume the latest run:
+
+```
+nextflow AF_cache.nf --fasta all.fasta -resume
+```
+
+To resume an older run, the user can find its job hash ID in `.nextflow/history`:
+
+```
+$ tail .nextflow/history 
+2025-02-21 11:11:17	-	suspicious_moriondo	-	94cc730a68d28d281326bb5abc139f75	aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset1.fasta
+2025-02-21 11:12:16	-	prickly_feynman	-	433cbbabaa8870cd8cab34357bf44bbd	fc260aa7-583c-4fbe-baa1-de34a33fbf48	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset2.fasta
+2025-02-21 11:13:25	-	marvelous_wiles	-	ac318a13d87b2c7ebe5170cba82444ba	10c69218-e6c5-4fcb-bfdf-a240ca678ff5	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset3.fasta
+```
+
+Then resume the desired run with `-resume <job_hash>:
+
+```
+nextflow AF_cache.nf --fasta all.fasta -resume aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd
 ```
 
 ## Other configuration options
