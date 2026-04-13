@@ -104,7 +104,7 @@ process format_jobs_af2 {
     path "sbatch_scripts/**.sh", emit: sh
 
     script:
-    def plist = pair_list.name != '.NO_FILE' ? "--file_list ${pair_list}" : ''
+    def plist = pair_list ? "--file_list ${pair_list}" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
@@ -137,7 +137,7 @@ process format_jobs_af3 {
     path "sbatch_scripts/**.sh", emit: sh
 
     script:
-    def plist = pair_list.name != '.NO_FILE' ? "--file_list ${pair_list}" : ''
+    def plist = pair_list ? "--file_list ${pair_list}" : ''
     """
     python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
                                                                 --json_dir ${json_cache} \\
@@ -227,7 +227,7 @@ workflow af3 {
 workflow {
     // process inputs
     fasta = file(params.fasta)
-    pair_list = file(params.pair_list)
+    pair_list = params.pair_list ? file(params.pair_list) : params.pair_list
     split_fasta_path = split_fasta(fasta)
     fasta_links = ln_fasta(split_fasta_path).flatten()
 
