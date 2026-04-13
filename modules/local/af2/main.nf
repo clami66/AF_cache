@@ -9,7 +9,7 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/pipeline/af2/prepare_alignments.py ${alignments} AF_data/
+    af2_prepare_alignments.py ${alignments} AF_data/
     """
 }
 
@@ -33,17 +33,17 @@ process parse_features_af2 {
     """
     # make sure that the custom installation of AF2.3 is found first
     mkdir -p pickle_cache
-    python ${params.af_cache_dir}/pipeline/af2/parse_features.py --flagfile ${params.af2_flagfile} \\
-                                                                 --output_dir ${af_data} \\
-                                                                 --fasta_paths ${fasta} \\
-                                                                 --mmseqs2_uniref_database_path ${mmseqs_db}/uniref30_2302_db \\
-                                                                 --mmseqs2_env_database_path ${mmseqs_db}/colabfold_envdb_202108_db \\
-                                                                 --template_mmcif_dir ${template_mmcif_dir} \\
-                                                                 --obsolete_pdbs_path ${obsolete_pdbs_path} \\
-                                                                 --pdb_seqres_database_path ${pdb_seqres_database_path} \\
-                                                                 ${skip_templates} \\
-                                                                 --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
-                                                                 --pickle_cache pickle_cache/
+    af2_parse_features.py --flagfile ${params.af2_flagfile} \\
+                        --output_dir ${af_data} \\
+                        --fasta_paths ${fasta} \\
+                        --mmseqs2_uniref_database_path ${mmseqs_db}/uniref30_2302_db \\
+                        --mmseqs2_env_database_path ${mmseqs_db}/colabfold_envdb_202108_db \\
+                        --template_mmcif_dir ${template_mmcif_dir} \\
+                        --obsolete_pdbs_path ${obsolete_pdbs_path} \\
+                        --pdb_seqres_database_path ${pdb_seqres_database_path} \\
+                        ${skip_templates} \\
+                        --undefok=data_dir,use_gpu_relax,models_to_relax,models_to_use,num_multimer_predictions_per_model,max_recycles \\
+                        --pickle_cache pickle_cache/
     """
 }
 
@@ -67,20 +67,19 @@ process format_jobs {
     def plist = pair_list ? "--file_list ${pair_list}" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
-    python ${params.af_cache_dir}/pipeline/af2/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
-                                                                        --pickle_dir ${pickle_cache} \\
-                                                                        --write_fastas \\
-                                                                        --af_path ${params.af_cache_dir} \\
-                                                                        --flagfile ${params.af2_flagfile} \\
-                                                                        --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
-                                                                        --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
-                                                                        --mmseqs2_binary_path ${params.mmseqs_bin} \\
-                                                                        --template_mmcif_dir ${template_mmcif_dir} \\
-                                                                        --obsolete_pdbs_path ${obsolete_pdbs_path} \\
-                                                                        --pdb_seqres_database_path ${pdb_seqres_database_path} \\
-                                                                        --data_dir ${params.af2_data_dir} \\
-                                                                        ${skip_templates} \\
-                                                                        ${plist}
+    af2_format_jobs.py ${fasta} AF_data_multimer/ \\
+                        --pickle_dir ${pickle_cache} \\
+                        --write_fastas \\
+                        --flagfile ${params.af2_flagfile} \\
+                        --mmseqs2_uniref_database_path ${params.mmseqs_db}/uniref30_2302_db \\
+                        --mmseqs2_env_database_path ${params.mmseqs_db}/colabfold_envdb_202108_db \\
+                        --mmseqs2_binary_path ${params.mmseqs_bin} \\
+                        --template_mmcif_dir ${template_mmcif_dir} \\
+                        --obsolete_pdbs_path ${obsolete_pdbs_path} \\
+                        --pdb_seqres_database_path ${pdb_seqres_database_path} \\
+                        --data_dir ${params.af2_data_dir} \\
+                        ${skip_templates} \\
+                        ${plist}
     """
 }
 
@@ -118,7 +117,7 @@ process get_params {
     script:
     """
     if ! ls ${params.af2_data_dir}/params/params*.npz 1> /dev/null 2>&1; then
-        ${params.af_cache_dir}/pipeline/af2/download_alphafold_params.sh ${params.af2_data_dir}
+        download_alphafold_params.sh ${params.af2_data_dir}
     fi
 
     touch .af2_params_ready

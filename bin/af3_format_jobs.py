@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import json
 import hashlib
@@ -60,7 +61,7 @@ def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and lar
 
 def format_af_command(json_input_dir, out_dir, flagfiles=None, af3_path="alphafold3/", other_args=""):
     flag_param = f"--flagfile {' --flagfile '.join(flagfiles)}" if flagfiles is not None else ""
-    return f"python {af3_path}/run_alphafold.py --output_dir {out_dir} --input_dir {json_input_dir} {flag_param} {' '.join(other_args)}"
+    return f"run_alphafold3.py --output_dir {out_dir} --input_dir {json_input_dir} {flag_param} {' '.join(other_args)}"
 
 
 def merge_jsons(jsons):

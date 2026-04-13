@@ -11,7 +11,7 @@ process setup_mmseqs2_dbs {
     fi
 
     if [[ ! -e "${params.mmseqs_db}/PDB_MMCIF_READY" ]] || [[ ! -e "${params.mmseqs_db}/UNIREF30_READY" ]] || [[ ! -e "${params.mmseqs_db}/COLABDB_READY" ]]; then
-        ${gpu_var} ${template_var} FAST_PREBUILT_DATABASES=1 ${params.af_cache_dir}/pipeline/common/setup_databases.sh ${params.mmseqs_db}
+        ${gpu_var} ${template_var} FAST_PREBUILT_DATABASES=1 setup_databases.sh ${params.mmseqs_db}
     fi
 
     touch .databases_ready
@@ -30,7 +30,7 @@ process split_fasta {
     script:
     """
     mkdir -p split_fasta/
-    python ${params.af_cache_dir}/pipeline/common/split_fasta.py ${fasta} split_fasta/
+    split_fasta.py ${fasta} split_fasta/
     """
 }
 
@@ -69,13 +69,13 @@ process mmseqs_align {
         mkdir -p alignments
         cp ${params.af_cache_dir}/test_data/alignments/*.a3m alignments/
     else
-        python ${params.af_cache_dir}/pipeline/common/run_msa_tool.py ${fasta} \\
-                                                                       mmseqs2 ${mmseqs_db}/ \\
-                                                                       --mmseqs ${params.mmseqs_bin} \\
-                                                                       --out_dir ./ \\
-                                                                       --n_cpu ${n_cpu} \\
-                                                                       ${use_gpu} \\
-                                                                       ${use_env}
+        run_msa_tool.py ${fasta} \\
+                        mmseqs2 ${mmseqs_db}/ \\
+                        --mmseqs ${params.mmseqs_bin} \\
+                        --out_dir ./ \\
+                        --n_cpu ${n_cpu} \\
+                        ${use_gpu} \\
+                        ${use_env}
     fi
     """
 }

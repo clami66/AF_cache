@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import argparse
 from sys import argv, exit
@@ -59,7 +61,7 @@ def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, f
     scripts_path = os.path.dirname(os.path.realpath(__file__))
     pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
     pad_flag = f"--pad_to_size {pad_to_size}" if pad_to_size else ""
-    return f"python {af_path}/run_alphafold.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
+    return f"run_alphafold2.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
 
 
 def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):

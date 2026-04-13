@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json
 import argparse
 from string import ascii_uppercase, ascii_lowercase

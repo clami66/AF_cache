@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2024 DeepMind Technologies Limited
 #
 # AlphaFold 3 source code is licensed under CC BY-NC-SA 4.0. To view a copy of

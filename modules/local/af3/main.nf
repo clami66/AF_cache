@@ -9,7 +9,7 @@ process convert_alignments {
 
     script:
     """
-    python ${params.af_cache_dir}/pipeline/af3/prepare_alignments.py ${alignments} AF_data/
+    af3_prepare_alignments.py ${alignments} AF_data/
     """
 }
 
@@ -26,11 +26,11 @@ process parse_features_af3 {
     script:
     """
     mkdir -p json_cache
-    python ${params.af_cache_dir}/pipeline/af3/parse_features.py --output_dir ${af_data} \\
-                                                        --fasta_paths ${fasta} \\
-                                                        --json_cache json_cache/ \\
-                                                        --flagfile ${params.af3_flagfile} \\
-                                                        --undefok=num_diffusion_samples,model_dir
+    af3_parse_features.py --output_dir ${af_data} \\
+                        --fasta_paths ${fasta} \\
+                        --json_cache json_cache/ \\
+                        --flagfile ${params.af3_flagfile} \\
+                        --undefok=num_diffusion_samples,model_dir
     """
 }
 
@@ -49,12 +49,11 @@ process format_jobs {
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
     """
-    python ${params.af_cache_dir}/pipeline/af3/format_alphafold_jobs.py ${fasta} AF_data_multimer/ \\
-                                                                --json_dir ${json_cache} \\
-                                                                --af3_path ${params.af_cache_dir}/pipeline/af3 \\
-                                                                --flagfile ${params.af3_flagfile} \\
-                                                                --model_dir ${params.af3_model_dir} \\
-                                                                ${plist}
+    af3_format_jobs.py ${fasta} AF_data_multimer/ \\
+                        --json_dir ${json_cache} \\
+                        --flagfile ${params.af3_flagfile} \\
+                        --model_dir ${params.af3_model_dir} \\
+                        ${plist}
     """
 }
 

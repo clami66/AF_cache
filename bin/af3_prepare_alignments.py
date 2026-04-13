@@ -1,20 +1,20 @@
+#!/usr/bin/env python
 import re
-import os
 import glob
-import pickle
 import string
-import base64
-import hashlib
 import argparse
-from sys import argv
 from pathlib import Path
 from functools import partial
-from multiprocessing import Pool, TimeoutError
+from multiprocessing import Pool
 
 
-def convert_alignment(in_alignment, out_dir, custom_taxids=None):
+def convert_alignment(in_alignment, out_dir, custom_taxids=None, use_taxid=True):
     seqids = set()
     tolower = str.maketrans('', '', string.ascii_lowercase)
+    if use_taxid:
+        p = re.compile("TaxID=\d*")
+    else:
+        p = re.compile("RepID=\w*")
     print(f"Opening {in_alignment}")
     with open(in_alignment) as aln:
         a3m_data = iter(aln.readlines())
@@ -42,28 +42,43 @@ def convert_alignment(in_alignment, out_dir, custom_taxids=None):
         target_id = target_id.split("|")[1]
     target_id = re.sub('[^0-9a-zA-Z]+', '', target_id)
     print(f"Target ID: {target_id}")
-    Path(args.out_dir, target_id, "msas", "A").mkdir(parents=True, exist_ok=True)
-    a3m_out = open(f"{args.out_dir}/{target_id}/msas/A/mmseqs2_hits.a3m", "w")
-    a3m_out.write(f">{target_id}\n")
-    a3m_out.write(target_seq)
+    Path(args.out_dir, target_id).mkdir(parents=True, exist_ok=True)
+    paired_out = open(f"{args.out_dir}/{target_id}/paired_hits.a3m", "w")
+    unpaired_out = open(f"{args.out_dir}/{target_id}/unpaired_hits.a3m", "w")
+    paired_out.write(f">{target_id}\n")
+    paired_out.write(target_seq)
+    unpaired_out.write(f">{target_id}\n")
+    unpaired_out.write(target_seq)
     print(f"Starting conversion: {target_id}")
     for line in a3m_data:
         if line.startswith(">"):
-            # TODO add taxid or repid conversion here
-            a3m_out.write(line)
+            find_id = re.search(p, line)
+            if find_id:
+                new_id = find_id.group(0).split("=")[-1]
+                if use_taxid:
+                    new_line = f">tr|ACCESSION|ACCESSION_{new_id} {line.strip('>')}"
+                else:
+                    new_line = f">tr|{new_id.split('_')[0]}|{new_id} {line.strip('>')}"
+                paired_out.write(new_line)
+                paired_out.write(next(a3m_data))
+            else:
+                unpaired_out.write(line)
+                unpaired_out.write(next(a3m_data))
         elif line.startswith("#") or len(line.strip()) < 1:
             continue
         else:
-            a3m_out.write(line)
+            #a3m_out.write(line)
+            print(f"ERROR: {line}")
 
-    a3m_out.close()
+    paired_out.close()
+    unpaired_out.close()
 
 
 def main(args):
     a3ms = glob.glob(f"{args.in_path}/*.a3m")
     print(f"Converting alignments: {a3ms}")
     with Pool(processes=int(args.n_cpu)) as pool:
-        pool.map(partial(convert_alignment, out_dir=args.out_dir, custom_taxids=args.custom_taxids), a3ms)
+        pool.map(partial(convert_alignment, out_dir=args.out_dir, custom_taxids=args.custom_taxids, use_taxid=args.taxid), a3ms)
 
 
 if __name__ == '__main__':
@@ -71,6 +86,7 @@ if __name__ == '__main__':
                                  that can be used for MSA pairing in AlphaFold-multimer runs")
     parser.add_argument("in_path", help = "Path to the a3m alignment file directory")
     parser.add_argument("out_dir", help = "Path to output directory")
+    parser.add_argument("--taxid", help = "Use tax ID rather than representative ID for pairing", action="store_true")
     parser.add_argument("--n_cpu", default=8, type=int)
     parser.add_argument("--custom_taxids", default=None, type=str, help = "Space-separated file of taxIDs or mnemoic IDs to replace in the outputs (e.g. '12345 6789' to convert taxID 12345 to 6789), for example in case to replace virus taxIDs with their respective host taxIDs")
     args = parser.parse_args()
