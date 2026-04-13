@@ -1,0 +1,19 @@
+include { convert_alignments ; parse_features_af3 ; collect_jsons ; format_jobs ; run_af3_jobs } from '../../../modules/local/af3'
+
+workflow AF3 {
+    take:
+    alignments_path
+    fasta_links
+    split_fasta_path
+    pair_list
+
+    main:
+    // convert
+    af_data_path = convert_alignments(alignments_path)
+    jsons = parse_features_af3(fasta_links, af_data_path).collect()
+    json_cache = collect_jsons(jsons)
+
+    // AF
+    sbatch_scripts = format_jobs(split_fasta_path, json_cache, pair_list).sh.collect().flatten()
+    run_af3_jobs(sbatch_scripts, json_cache)
+}
