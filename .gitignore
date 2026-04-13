@@ -3,4 +3,3 @@ slurm-*.out
 .nextflow*
 outputs
 *.bak
-nextflow.config
