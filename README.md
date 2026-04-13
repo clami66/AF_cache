@@ -122,6 +122,7 @@ Other behaviors for AF2 and AF3 (number of recycles, number of seeds etc.) shoul
 </details>
 <details>
 <summary>Running AlphaFold3</summary>
+
 AlphaFold3 can be run by simply adding the `--af3` flag:
 
 ```
@@ -136,7 +137,8 @@ This will automatically install the necessary environment, according to the dock
 </details>
 
 <details>
-<summary>Skipping templates</summary>
+<summary>Using structural templates</summary>
+
 The template step in the pipeline can be enabled/skipped, either by permanently setting `skip_template` inside `nextflow.config`:
 
 ```
@@ -153,6 +155,7 @@ nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --skip_templates=false
 
 <details>
 <summary>Using ColabFold DBs that are already on the system</summary>
+
 If the ColabFold DBs have been downloaded through the original ColabFold setup script, these can be reused so that the pipeline doesn't download an extra copy. This can be done by pointing the `database` directory inside `nextflow.config` to the right location:
 
 ```
@@ -177,7 +180,8 @@ pdb_seqres_database_path = "/path/to/pdb_seqres/pdb_seqres.txt"
 
 <details>
 <summary>Using a local installation of MMseqs2</summary>
-Binaries compiled on a system can be faster than precompiled ones. So, if an installation of MMseqs2 is already present on the system, that can be used instead of the docker/apptainer/conda version by pointing to the MMseqs2 binary in `nextflow.config`:
+
+Compiling MMseqs2 from the source code is sometimes better than using the pre-compiled binaries included in AF_cache. If an installation of MMseqs2 is already present on the system, that can be used instead of the pre-compiled version by changing the path to the MMseqs2 binary in `nextflow.config`:
 
 ```
 mmseqs_bin = "/path/to/bin/mmseqs"
