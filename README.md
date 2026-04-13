@@ -1,5 +1,7 @@
 # AF_cache: fast inference of AlphaFold2 / AlphaFold3 predictions in large-scale studies
 
+![H1111](img/timings.png)
+
 ## Setup
 
 1. [Install nextflow](https://www.nextflow.io/docs/latest/install.html)
