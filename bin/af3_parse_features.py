@@ -22,6 +22,8 @@ flags.DEFINE_list(
 flags.DEFINE_string('json_cache', None, 'Path to a cache directory for monomer .pkl features')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
+flags.DEFINE_boolean('templates', True, 'Enable template search in monomer and multimer pipeline')
+
 DB_DIR = flags.DEFINE_string(
     'db_dir',
     'alphafold3_data/',
@@ -122,31 +124,34 @@ def main(_):
     sequence_hash = hashlib.md5(str(target_sequence).encode()).hexdigest()
     out_json = os.path.join(FLAGS.json_cache, f"{sequence_hash}.json")
 
-    template_hits = _get_protein_templates(
-      sequence = target_sequence,
-      input_msa_a3m = "".join(open(paired_msa_path, "r").readlines()),
-      run_template_search = True,
-      templates_config = _templates_config,
-      pdb_database_path = f"{FLAGS.db_dir}/mmcif_files",
+    if FLAGS.templates:
+      template_hits = _get_protein_templates(
+        sequence = target_sequence,
+        input_msa_a3m = "".join(open(paired_msa_path, "r").readlines()),
+        run_template_search = True,
+        templates_config = _templates_config,
+        pdb_database_path = f"{FLAGS.db_dir}/mmcif_files",
       )
 
-    templates = [
-          folding_input.Template(
-              mmcif=struc.to_mmcif(),
-              query_to_template_map=hit.query_to_hit_mapping,
-          )
-          for hit, struc in template_hits.get_hits_with_structures()
+      templates = [
+            folding_input.Template(
+                mmcif=struc.to_mmcif(),
+                query_to_template_map=hit.query_to_hit_mapping,
+            )
+            for hit, struc in template_hits.get_hits_with_structures()
       ]
-    ser_templates = [
-          {
-              'mmcif': template.mmcif,
-              'queryIndices': list(template.query_to_template_map.keys()),
-              'templateIndices': (
-                  list(template.query_to_template_map.values()) or None
-              ),
-          }
-          for template in templates
+      ser_templates = [
+            {
+                'mmcif': template.mmcif,
+                'queryIndices': list(template.query_to_template_map.keys()),
+                'templateIndices': (
+                    list(template.query_to_template_map.values()) or None
+                ),
+            }
+            for template in templates
       ]
+    else:
+      ser_templates = []
 
     chain_dict = {"protein": {"id": "A",
                               "sequence": str(target_sequence),

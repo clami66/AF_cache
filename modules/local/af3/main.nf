@@ -24,12 +24,14 @@ process parse_features_af3 {
     path "json_cache/*.json"
 
     script:
+    def skip_templates = params.skip_templates ? "--notemplates" : ''
     """
     mkdir -p json_cache
     af3_parse_features.py --output_dir ${af_data} \\
                         --fasta_paths ${fasta} \\
                         --json_cache json_cache/ \\
                         --flagfile ${params.af3_flagfile} \\
+                        ${skip_templates} \\
                         --undefok=num_diffusion_samples,model_dir
     """
 }
