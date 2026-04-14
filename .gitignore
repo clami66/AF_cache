@@ -1,5 +1,14 @@
 __pycache__
 slurm-*.out
 .nextflow*
+work
 outputs
 *.bak
+database
+mmseqs
+alphafold_data
+stereo_chemical_props.txt
+condaenv.*.requirements.txt
+conda
+.nf-test*
+nextflow.config.*
