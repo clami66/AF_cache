@@ -19,6 +19,7 @@ process parse_features_af3 {
     input:
     path fasta
     path af_data
+    path af3_db_dir
 
     output:
     path "json_cache/*.json"
@@ -31,6 +32,7 @@ process parse_features_af3 {
                         --fasta_paths ${fasta} \\
                         --json_cache json_cache/ \\
                         --flagfile ${params.af3_flagfile} \\
+                        --db_dir ${af3_db_dir} \\
                         ${skip_templates} \\
                         --undefok=num_diffusion_samples,model_dir
     """
@@ -43,6 +45,7 @@ process format_jobs {
     path fasta
     path json_cache
     path pair_list
+    path af3_db_dir
 
     output:
     path "AF_data_multimer/", emit: 'dir'
@@ -57,6 +60,7 @@ process format_jobs {
                         --model_dir ${params.af3_model_dir} \\
                         --include_homomers ${params.include_homomers} \\
                         --n_seeds ${params.af3_n_prediction_seeds} \\
+                        --db_dir ${af3_db_dir} \\
                         ${plist}
     """
 }
@@ -78,6 +82,7 @@ process run_af3_jobs {
     input:
     path sbatch_script
     path cache
+    path af3_db_dir
 
     script:
     """

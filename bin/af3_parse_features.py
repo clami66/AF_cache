@@ -23,15 +23,14 @@ flags.DEFINE_string('json_cache', None, 'Path to a cache directory for monomer .
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
 flags.DEFINE_boolean('templates', True, 'Enable template search in monomer and multimer pipeline')
-
-DB_DIR = flags.DEFINE_string(
+flags.DEFINE_string(
     'db_dir',
     'alphafold3_data/',
     'Path to the directory containing the databases.',
 )
 _SEQRES_DATABASE_PATH = flags.DEFINE_string(
     'seqres_database_path',
-    '${DB_DIR}/pdb_seqres_2022_09_28.fasta',
+    '${DB_DIR}/pdb_seqres_2022_09_28.fast',
     'PDB sequence database path, used for template search.',
 )
 _HMMSEARCH_BINARY_PATH = flags.DEFINE_string(
@@ -84,7 +83,7 @@ def main(_):
 
   _templates_config = msa_config.TemplatesConfig(
       template_tool_config=msa_config.TemplateToolConfig(
-          database_path=FLAGS.seqres_database_path,
+          database_path=f"{FLAGS.db_dir}/pdb_seqres_2022_09_28.fasta",
           chain_poly_type='polypeptide(L)',
           hmmsearch_config=msa_config.HmmsearchConfig(
               hmmsearch_binary_path=FLAGS.hmmsearch_binary_path,

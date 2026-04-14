@@ -10,10 +10,10 @@ workflow AF3 {
     main:
     // convert
     af_data_path = convert_alignments(alignments_path)
-    jsons = parse_features_af3(fasta_links, af_data_path).collect()
+    jsons = parse_features_af3(fasta_links, af_data_path, params.af3_db_dir).collect()
     json_cache = collect_jsons(jsons)
 
     // AF
-    sbatch_scripts = format_jobs(split_fasta_path, json_cache, pair_list).sh.collect().flatten()
-    run_af3_jobs(sbatch_scripts, json_cache)
+    sbatch_scripts = format_jobs(split_fasta_path, json_cache, pair_list, params.af3_db_dir).sh.collect().flatten()
+    run_af3_jobs(sbatch_scripts, json_cache, params.af3_db_dir)
 }
