@@ -1,5 +1,0 @@
---db_dir=/proj/wallner-b/share/alphafold3_data/
---seqres_database_path=/proj/wallner-b/share/alphafold3_data/pdb_seqres_2022_09_28.fasta
---hmmbuild_binary_path=/proj/beyondfold/apps/.conda/envs/AF_cache/bin/hmmbuild
---hmmsearch_binary_path=/proj/beyondfold/apps/.conda/envs/AF_cache/bin/hmmsearch
---max_template_date=2024-05-01
