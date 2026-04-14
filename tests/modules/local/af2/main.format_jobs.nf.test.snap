@@ -1,0 +1,57 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        [
+                            "NC0237441protYP00901868911.fasta:md5,9a8944d86fda0fea8997306aef5d57ec"
+                        ],
+                        [
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012.fasta:md5,94d906c37bc361738655cab8b0c7c2c7"
+                        ],
+                        [
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.fasta:md5,b5bd3195bfd01d4416dc56410eec8c92"
+                        ],
+                        [
+                            
+                        ]
+                    ]
+                ],
+                "1": [
+                    [
+                        "400_0.sh:md5,73c3582fff58a010a602f2998d80d66a",
+                        "800_0.sh:md5,102b753f3ffa36c646e9b2310cf85416"
+                    ]
+                ],
+                "dir": [
+                    [
+                        [
+                            "NC0237441protYP00901868911.fasta:md5,9a8944d86fda0fea8997306aef5d57ec"
+                        ],
+                        [
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012.fasta:md5,94d906c37bc361738655cab8b0c7c2c7"
+                        ],
+                        [
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.fasta:md5,b5bd3195bfd01d4416dc56410eec8c92"
+                        ],
+                        [
+                            
+                        ]
+                    ]
+                ],
+                "sh": [
+                    [
+                        "400_0.sh:md5,73c3582fff58a010a602f2998d80d66a",
+                        "800_0.sh:md5,102b753f3ffa36c646e9b2310cf85416"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-04-14T14:31:16.802045688",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

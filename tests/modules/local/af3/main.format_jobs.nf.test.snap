@@ -1,0 +1,67 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        [
+                            [
+                                "NC0237441protYP00901868911.json:md5,2d7b4212e5a2e46d2301c92d639ffaa1"
+                            ],
+                            [
+                                "NC0237441protYP00901868911_NC0237441protYP00901869012.json:md5,a7b5c17c6935f6c8b773a6bfd9aa3ddc",
+                                "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.json:md5,911f281e4b174a4379994fc40545783e"
+                            ]
+                        ],
+                        [
+                            
+                        ],
+                        [
+                            "NC0237441protYP00901868911.json:md5,2d7b4212e5a2e46d2301c92d639ffaa1",
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012.json:md5,a7b5c17c6935f6c8b773a6bfd9aa3ddc",
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.json:md5,911f281e4b174a4379994fc40545783e"
+                        ]
+                    ]
+                ],
+                "1": [
+                    [
+                        "256_0.sh:md5,127f9cb666fac4c597c9b8d5d5b4b044",
+                        "512_0.sh:md5,dccb7be2f8eb3906cc3cde484486928f"
+                    ]
+                ],
+                "dir": [
+                    [
+                        [
+                            [
+                                "NC0237441protYP00901868911.json:md5,2d7b4212e5a2e46d2301c92d639ffaa1"
+                            ],
+                            [
+                                "NC0237441protYP00901868911_NC0237441protYP00901869012.json:md5,a7b5c17c6935f6c8b773a6bfd9aa3ddc",
+                                "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.json:md5,911f281e4b174a4379994fc40545783e"
+                            ]
+                        ],
+                        [
+                            
+                        ],
+                        [
+                            "NC0237441protYP00901868911.json:md5,2d7b4212e5a2e46d2301c92d639ffaa1",
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012.json:md5,a7b5c17c6935f6c8b773a6bfd9aa3ddc",
+                            "NC0237441protYP00901868911_NC0237441protYP00901869012_NC0237441protYP00901869113.json:md5,911f281e4b174a4379994fc40545783e"
+                        ]
+                    ]
+                ],
+                "sh": [
+                    [
+                        "256_0.sh:md5,127f9cb666fac4c597c9b8d5d5b4b044",
+                        "512_0.sh:md5,dccb7be2f8eb3906cc3cde484486928f"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-04-14T14:36:17.688310995",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}
