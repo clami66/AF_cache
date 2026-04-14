@@ -1,0 +1,36 @@
+nextflow_workflow {
+
+    name "Test Workflow AF2"
+    script "subworkflows/local/af2/main.nf"
+    config "tests/subworkflows/local/af2/nextflow.config"
+    workflow "AF2"
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                // define parameters here. Example:
+                outdir = "tests/results_AF3"
+            }
+            workflow {
+                """
+                // define inputs of the workflow here
+                // alignments_path
+                // fasta_links
+                // split_fasta_path
+                // pair_list
+                input[0] = "${projectDir}/test_data/alignments"
+                input[1] = Channel.fromPath("${projectDir}/test_data/fasta/*.fasta")
+                input[2] = "${projectDir}/test_data/split_fasta"
+                input[3] = "${projectDir}/test_data/inputs/pair_list.txt"
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+        }
+
+    }
+
+}
