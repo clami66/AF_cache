@@ -79,7 +79,7 @@ def merge_jsons(jsons):
     return merged_json
 
 
-def group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
+def group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False, n_seeds=1):
 
     if multimer_list:
         all_multimers = multimer_list
@@ -101,7 +101,7 @@ def group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir, wri
         multimer_hashes = [p[0][1] for p in multimer]
         merged_json = merge_jsons([f"{json_dir}/{h}.json" for h in multimer_hashes])
         merged_json["name"] = multimer_id
-
+        merged_json["modelSeeds"] = [n for n in range(n_seeds)]
 
         multimer_json = Path(multimer_json_dir, f"{multimer_id}.json")
         with open(multimer_json, "w") as out:
@@ -111,7 +111,7 @@ def group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir, wri
 
         if not af_output or overwrite_output:
             multimer_fasta = Path(out_dir, multimer_id, f"{multimer_id}.fasta")
-            if args.write_fastas:
+            if write_fastas:
                 with open(multimer_fasta, "w") as pf:
                     for pr in multimer_records:
                         SeqIO.write(pr, pf, "fasta")
@@ -137,7 +137,7 @@ def main(args, af_args):
         fasta_records = get_records_from_dir(glob(f"{args.in_path}/*.fasta"))
         multimer_list = []
 
-    multimers = group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir=args.json_dir, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions)
+    multimers = group_multimers(fasta_records, out_dir, splits, multimer_list, json_dir=args.json_dir, write_fastas=args.write_fastas, overwrite_output=args.overwrite_output, include_homomers=args.include_homomers, both_directions=args.both_directions, n_seeds=args.n_seeds)
     Path("sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
 
@@ -178,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument("--write_fastas", action="store_true", default=False, help="If the fasta files and folder structure for all pairs should be initialized")
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[256, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 3584, 4096, 4608, 5120], help="Bucket boundaries to group multiple inference jobs")
+    parser.add_argument("--n_seeds", type=int, default=1, help="Number of seeds in AF3 inference job")
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1, 1, 1, 1, 1, 1, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
 
     args, unknownargs = parser.parse_known_args()

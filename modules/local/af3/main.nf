@@ -54,6 +54,7 @@ process format_jobs {
                         --flagfile ${params.af3_flagfile} \\
                         --model_dir ${params.af3_model_dir} \\
                         --include_homomers ${params.include_homomers} \\
+                        --n_seeds ${params.af3_n_prediction_seeds} \\
                         ${plist}
     """
 }
