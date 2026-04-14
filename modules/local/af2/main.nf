@@ -78,6 +78,7 @@ process format_jobs {
                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                         --data_dir ${params.af2_data_dir} \\
+                        --include_homomers ${params.include_homomers} \\
                         ${skip_templates} \\
                         ${plist}
     """

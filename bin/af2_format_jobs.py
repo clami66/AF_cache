@@ -57,7 +57,7 @@ def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and lar
     return seqlen**2 * lam / 3600
 
 
-def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, af_path="./", other_args=""):
+def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, other_args=""):
     scripts_path = os.path.dirname(os.path.realpath(__file__))
     pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
     pad_flag = f"--pad_to_size {pad_to_size}" if pad_to_size else ""
@@ -65,7 +65,6 @@ def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, f
 
 
 def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
-
     if pair_list:
         all_pairs = pair_list
     elif both_directions:
@@ -86,7 +85,7 @@ def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, 
 
         if not af_output or overwrite_output:
             pair_fasta = Path(out_dir, pair_id, f"{pair_id}.fasta")
-            if args.write_fastas:
+            if write_fastas:
                 pair_folder = Path(out_dir, pair_id)
                 pair_folder.mkdir(parents=True, exist_ok=True)
 
@@ -148,7 +147,6 @@ def main(args, af_args):
                                                     pickle_dir=args.pickle_dir,
                                                     pad_to_size=pad_to_size,
                                                     flagfile=args.flagfile,
-                                                    af_path=args.af_path,
                                                     other_args=af_args))
                     command.write("\n")
 
@@ -170,7 +168,6 @@ if __name__ == '__main__':
     parser.add_argument("--splits", nargs="+", default=[400, 800, 1000, 1200, 1400, 1600, 4500], help="Boundaries (sum of sequences length) to group multiple inference jobs")
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
     parser.add_argument("--estimate_gpu_runtime", action="store_true")
-    parser.add_argument("--af_path", help="Path to AF2 installation")
 
     args, unknownargs = parser.parse_known_args()
 

@@ -59,7 +59,7 @@ def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and lar
     return seqlen**2 * lam / 3600
 
 
-def format_af_command(json_input_dir, out_dir, flagfiles=None, af3_path="alphafold3/", other_args=""):
+def format_af_command(json_input_dir, out_dir, flagfiles=None, other_args=""):
     flag_param = f"--flagfile {' --flagfile '.join(flagfiles)}" if flagfiles is not None else ""
     return f"run_alphafold3.py --output_dir {out_dir} --input_dir {json_input_dir} {flag_param} {' '.join(other_args)}"
 
@@ -161,7 +161,7 @@ def main(args, af_args):
             log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
             with open(command_file, "w") as command:
                 command.write(bash_header())
-                command.write(format_af_command(str(input_json_dir), f"{out_dir}/{max_len}_{chunk_n}", flagfiles=args.flagfiles, af3_path=args.af3_path, other_args=af_args))
+                command.write(format_af_command(str(input_json_dir), f"{out_dir}/{max_len}_{chunk_n}", flagfiles=args.flagfiles, other_args=af_args))
                 command.write("\n")
 
 
@@ -169,7 +169,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
     parser.add_argument("in_path", help = "Path to the directory containing the fasta files")
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
-    parser.add_argument("--af3_path", default="alphafold3/", help="AlphaFold install path")
     parser.add_argument("--flagfiles", nargs="+", help = "Flagfile with parameters to AF", default=None)
     parser.add_argument("--file_list", help = "Path to file containing a list of files to run (if not desire all against all)",default="")
     parser.add_argument("--list_separator", default=" ", help="Character used to separate protein pairs in file list (--file_list)")
