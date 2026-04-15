@@ -34,18 +34,23 @@ process split_fasta {
     """
 }
 
-process ln_fasta {
+process merge_fastas {
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
-    path fasta
+    path fastas
 
     output:
-    path "fasta/*.fasta"
+    path "merged.fasta"
 
     script:
     """
-    ln -s ${fasta} fasta
+    for file in ${fastas}/*.fasta; do
+        id=\$(basename \${file} .fasta)
+        echo ">\${id}"
+        grep -v ">" \$file | tr -d "\n"
+        echo
+    done > merged.fasta
     """
 }
 

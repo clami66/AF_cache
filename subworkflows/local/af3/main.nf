@@ -3,17 +3,17 @@ include { convert_alignments ; parse_features_af3 ; collect_jsons ; format_jobs 
 workflow AF3 {
     take:
     alignments_path
-    fasta_links
-    split_fasta_path
+    fasta_dir
     pair_list
 
     main:
     // convert
     af_data_path = convert_alignments(alignments_path)
-    jsons = parse_features_af3(fasta_links, af_data_path, params.af3_db_dir).collect()
+    fastas = channel.fromPath("$fasta_dir/*.fasta")
+    jsons = parse_features_af3(fastas, af_data_path, params.af3_db_dir).collect()
     json_cache = collect_jsons(jsons)
 
     // AF
-    sbatch_scripts = format_jobs(split_fasta_path, json_cache, pair_list, params.af3_db_dir).sh.collect().flatten()
+    sbatch_scripts = format_jobs(fasta_dir, json_cache, pair_list, params.af3_db_dir).sh.collect().flatten()
     run_af3_jobs(sbatch_scripts, json_cache, params.af3_db_dir)
 }
