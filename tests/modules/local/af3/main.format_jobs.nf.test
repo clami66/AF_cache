@@ -9,20 +9,21 @@ nextflow_process {
 
         when {
             params {
-
+                af3_db_dir = "/proj/common-datasets/AlphaFold3/"
             }
             process {
                 """
-                input[0] = "${projectDir}/test_data/split_fasta"
+                input[0] = "${projectDir}/test_data/inputs/fasta"
                 input[1] = "${projectDir}/test_data/json_cache"
                 input[2] = "${projectDir}/test_data/inputs/pair_list.txt"
+                input[3] = "${params.af3_db_dir}"
                 """
             }
         }
 
         then {
             assert process.success
-            //assert snapshot(process.out).match()
+            assert snapshot(process.out).match()
         }
 
     }

@@ -9,20 +9,13 @@ nextflow_workflow {
 
         when {
             params {
-                // define parameters here. Example:
                 outdir = "tests/results_AF3"
             }
             workflow {
                 """
-                // define inputs of the workflow here
-                // alignments_path
-                // fasta_links
-                // split_fasta_path
-                // pair_list
                 input[0] = "${projectDir}/test_data/alignments"
-                input[1] = Channel.fromPath("${projectDir}/test_data/fasta/*.fasta")
-                input[2] = "${projectDir}/test_data/split_fasta"
-                input[3] = "${projectDir}/test_data/inputs/pair_list.txt"
+                input[1] = "${projectDir}/test_data/inputs/fasta/"
+                input[2] = "${projectDir}/test_data/inputs/pair_list.txt"
                 """
             }
         }
