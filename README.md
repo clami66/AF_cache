@@ -19,7 +19,7 @@
 3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters (could take a few hours to set up).
     ```
     cd AF_cache/
-    nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -resume
+    nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -resume
     ```
 
 * **The pipeline uses Docker containers to automatically install dependencies. Alternatively, apptainer or conda can also be used. [See below](https://github.com/clami66/AF_cache/tree/main?tab=readme-ov-file#other-configuration-options) to configure this behavior.**
@@ -28,17 +28,18 @@
 
 ### Pipeline inputs
 
-The input to a pipeline is a single `.fasta` file containing all the sequences for a large-scale experiment:
-
-```
-cat fasta_seqs/*.fasta > all_seqs.fasta
-```
-
-The workflow will take this single fasta file as input:
+The input to a pipeline is a directory full of `.fasta` files containing all the sequences for a large-scale experiment:
 
 ```
 # -resume avoids re-running completed steps if the job crashed
-nextflow AF_cache.nf --fasta all_seqs.fasta -resume
+nextflow AF_cache.nf --fasta fasta_dir/ -resume
+```
+
+If only one fasta file with multiple sequences is available, we provide a script to split it into multiple files containig a single sequence:
+
+```
+mkdir fasta_dir/; python bin/split_fasta.py all_seqs.fasta fasta_dir/
+nextflow AF_cache.nf --fasta fasta_dir/
 ```
 
 ### Subsetting pairs, running multimers (trimers, etc.)
