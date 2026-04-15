@@ -2,7 +2,7 @@
 --models_to_relax=NONE
 --models_to_use=model_1_multimer_v3
 --num_multimer_predictions_per_model=1
---max_recycles=20
+--max_recycles=3
 --redundancy_reduce_templates=99
 --db_preset=full_dbs
 --model_preset=multimer
