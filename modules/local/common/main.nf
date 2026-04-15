@@ -45,12 +45,7 @@ process merge_fastas {
 
     script:
     """
-    for file in ${fastas}/*.fasta; do
-        id=\$(basename \${file} .fasta)
-        echo ">\${id}"
-        grep -v ">" \$file | tr -d "\n"
-        echo
-    done > merged.fasta
+    merge_fastas.py ${fastas} merged.fasta --unique
     """
 }
 
