@@ -53,14 +53,15 @@ process format_jobs {
 
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
+    def include_homomers = params.include_homomers ? '--include_homomers': ''
     """
     af3_format_jobs.py ${fasta} AF_data_multimer/ \\
                         --json_dir ${json_cache} \\
                         --flagfile ${params.af3_flagfile} \\
                         --model_dir ${params.af3_model_dir} \\
-                        --include_homomers ${params.include_homomers} \\
                         --n_seeds ${params.af3_n_prediction_seeds} \\
                         --db_dir ${af3_db_dir} \\
+                        ${include_homomers} \\
                         ${plist}
     """
 }

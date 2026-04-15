@@ -66,6 +66,7 @@ process format_jobs {
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
+    def include_homomers = params.include_homomers ? '--include_homomers': ''
     """
     af2_format_jobs.py ${fasta} AF_data_multimer/ \\
                         --pickle_dir ${pickle_cache} \\
@@ -78,7 +79,7 @@ process format_jobs {
                         --obsolete_pdbs_path ${obsolete_pdbs_path} \\
                         --pdb_seqres_database_path ${pdb_seqres_database_path} \\
                         --data_dir ${params.af2_data_dir} \\
-                        --include_homomers ${params.include_homomers} \\
+                        ${include_homomers} \\
                         ${skip_templates} \\
                         ${plist}
     """
