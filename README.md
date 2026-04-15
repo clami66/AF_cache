@@ -19,7 +19,7 @@
 3. Run the pipeline for the first time. This will automatically download and setup all the necessary DBs, tools and AF2 parameters (could take a few hours to set up).
     ```
     cd AF_cache/
-    nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -resume
+    nextflow AF_cache.nf --fasta test_data/inputs/fasta/
     ```
 
 * **The pipeline uses Docker containers to automatically install dependencies. Alternatively, apptainer or conda can also be used. [See below](https://github.com/clami66/AF_cache/tree/main?tab=readme-ov-file#other-configuration-options) to configure this behavior.**
@@ -31,8 +31,7 @@
 The input to a pipeline is a directory full of `.fasta` files containing all the sequences for a large-scale experiment:
 
 ```
-# -resume avoids re-running completed steps if the job crashed
-nextflow AF_cache.nf --fasta fasta_dir/ -resume
+nextflow AF_cache.nf --fasta fasta_dir/
 ```
 
 If only one fasta file with multiple sequences is available, we provide a script to split it into multiple files containig a single sequence:
@@ -55,7 +54,7 @@ YP00901869012 YP00901869012 YP00901869113
 ...
 
 # will generate predictions for one homodimer and one heterotrimer:
-nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ --pair_list --fasta test_data/inputs/fasta/pair_list.txt
 ```
 
 ### Resuming runs
@@ -63,22 +62,22 @@ nextflow AF_cache.nf --fasta all.fasta --pair_list multimers_list
 Runs are automatically cached by nextflow so that intermediate results can be reused in case of crashes, or if the user changes some settings. Just use the `-resume` flag to resume the latest run:
 
 ```
-nextflow AF_cache.nf --fasta all.fasta -resume
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -resume
 ```
 
 To resume an older run, the user can find its job hash ID in `.nextflow/history`:
 
 ```
 $ tail .nextflow/history 
-2025-02-21 11:11:17	-	suspicious_moriondo	-	94cc730a68d28d281326bb5abc139f75	aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset1.fasta
-2025-02-21 11:12:16	-	prickly_feynman	-	433cbbabaa8870cd8cab34357bf44bbd	fc260aa7-583c-4fbe-baa1-de34a33fbf48	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset2.fasta
-2025-02-21 11:13:25	-	marvelous_wiles	-	ac318a13d87b2c7ebe5170cba82444ba	10c69218-e6c5-4fcb-bfdf-a240ca678ff5	nextflow AF_cache.nf --fasta tests/gpu_align_test/dataset3.fasta
+2025-02-21 11:11:17	-	suspicious_moriondo	-	94cc730a68d28d281326bb5abc139f75	aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd	nextflow AF_cache.nf --fasta test_data/inputs/fasta/
+2025-02-21 11:12:16	-	prickly_feynman	-	433cbbabaa8870cd8cab34357bf44bbd	fc260aa7-583c-4fbe-baa1-de34a33fbf48	nextflow AF_cache.nf --fasta test_data/inputs/fasta/
+2025-02-21 11:13:25	-	marvelous_wiles	-	ac318a13d87b2c7ebe5170cba82444ba	10c69218-e6c5-4fcb-bfdf-a240ca678ff5	nextflow AF_cache.nf --fasta test_data/inputs/fasta/
 ```
 
 Then resume the desired run with `-resume <job_hash>:
 
 ```
-nextflow AF_cache.nf --fasta all.fasta -resume aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -resume aa3ea913-abd3-43fb-a8c9-a1e0276f5bbd
 ```
 
 ## Other configuration options
@@ -92,11 +91,11 @@ The pipeline uses Docker containers to automatically get all the requirements. A
 
 Apptainer/singularity:
 ```
-nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -profile apptainer
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -profile apptainer
 ```
 Conda/Mamba:
 ```
-nextflow AF_cache.nf --fasta test_data/fasta/all.fasta -profile conda
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ -profile conda
 ```
 
 </details>
@@ -129,7 +128,7 @@ Other behaviors for AF2 and AF3 (number of recycles, number of seeds etc.) shoul
 AlphaFold3 can be run by simply adding the `--af3` flag:
 
 ```
-nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --af3
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ --af3
 ```
 This will automatically install the necessary environment, according to the docker/apptainer/conda preferences described above.
 
@@ -152,7 +151,7 @@ By default, templates are always skipped. This will also avoid downloading the t
 
 Like all `params` options, this behavior can be changed at runtime:
 ```
-nextflow AF_cache.nf --fasta test_data/fasta/all.fasta --skip_templates=false
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ --skip_templates=false
 ```
 </details>
 
@@ -244,54 +243,3 @@ withName:'convert_alignments_af2|convert_alignments_af2|parse_features_af2|parse
 Consult the Nextlow docs for more information about setting up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
 
 </details>
-
-## Running pipeline steps separately (deprecated)
-
-1. Run alignments with MMseqs2
-
-GPU:
-```
-conda activate AF_cache
-mmseqs_db=/path/to/mmseqs_db
-mmseqs_bin=/path/to/mmseqs
-
-python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --gpu --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 128
-```
-
-CPU (not recommended):
-```
-python $AF_CACHE/run_msa_tool.py all.fasta mmseqs2 $mmseqs_db --out_dir align_outdir/ --mmseqs $mmseqs_bin --n_cpu $n_cpu --use-env --n_cpu 32
-```
-
-
-    Expected outputs:
-    * align_outdir/alignments/ : folder including N .a3m files, one for each of the N fasta sequences in all_seqs.fasta
-
-
-2. [optional] The alignments are written as a series of `.a3m` files in path/to/alignments/outdir/. These have to be converted to AlphaFold-like alignments, then we make AlphaFold parse the alignments and save them into pickle files. This is done in parallel for all a3m files at once:
-
-```
-$ python $AF_CACHE/prepare_alignments.py align_outdir/alignments/ AF_outdir/
-$ ls fasta_seqs/*.fasta | parallel -j $n_cpu python $AF_CACHE/parse_features.py --flagfile $AF_CACHE/multimer_full_dbs_v3.flag --output_dir AF_outdir/ --fasta_paths={} --pickle_cache pickle_cache/ --alignments_only
-```
-
-    Expected outputs:
-
-    * pickle_cache/ : one `.pkl` file per fasta sequence in the dataset
-
-3. [optional] Generate all-vs-all fasta files, AF folder structures and package together jobs in multimer scripts:
-
-```
-$ python $AF_CACHE/format_alphafold_jobs.py fasta_seqs/ AF_outdir/ --pickle_dir pickle_cache --write_fastas --proj_id <proj-id>
-```
-
-    Expected outputs:
-
-    * AF_outdir/sbatch_scripts/ : all the packaged sbatch job scripts
-        (e.g. /proj/beyondfold/users/x_clami/mmseqs_benchmark/egg_sperm_all/AF_models/sbatch_scripts/4500_0.sh)
-    * AF_outdir/outdir/logs : all the slurm logs will go here
-    * AF_outdir/<p1>_<p2> : all the dimers output folders. These will include files such as:
-        * path/to/AF/outdir/<p1>_<p2>/<p1>_<p2>.fasta
-        * path/to/AF/outdir/<p1>_<p2>/ranked_0.pdb
-        * etc.
-
