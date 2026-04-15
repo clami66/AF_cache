@@ -19,7 +19,6 @@ process parse_features_af3 {
     input:
     path fasta
     path af_data
-    path af3_db_dir
 
     output:
     path "json_cache/*.json"
@@ -32,32 +31,33 @@ process parse_features_af3 {
                         --fasta_paths ${fasta} \\
                         --json_cache json_cache/ \\
                         --flagfile ${params.af3_flagfile} \\
-                        --db_dir ${af3_db_dir} \\
+                        --seqres_database_path ${params.pdb_seqres_database_path} \\
+                        --pdb_database_path ${params.template_mmcif_dir} \\
                         ${skip_templates} \\
                         --undefok=num_diffusion_samples,model_dir
     """
 }
 
 process format_jobs {
+
     input:
     path fasta
     path json_cache
     path pair_list
-    path af3_db_dir
 
     output:
     path "chunk_*"
 
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
-    def include_homomers = params.include_homomers ? '--include_homomers' : ''
+    def include_homomers = params.include_homomers ? '--include_homomers': ''
     """
     af3_format_jobs.py ${fasta} AF_data_multimer/ \\
                         --json_dir ${json_cache} \\
                         --flagfile ${params.af3_flagfile} \\
                         --model_dir ${params.af3_model_dir} \\
                         --n_seeds ${params.af3_n_prediction_seeds} \\
-                        --db_dir ${af3_db_dir} \\
+                        --norun_data_pipeline \\
                         ${include_homomers} \\
                         ${plist}
     """
@@ -82,7 +82,6 @@ process run_af3_jobs {
     input:
     path chunk
     path cache
-    path af3_db_dir
 
     output:
     path "AF3_data_multimer/*"
@@ -92,6 +91,7 @@ process run_af3_jobs {
     """
     mkdir AF3_data_multimer
     mkdir logs_AF3
+    check_ccd.py
     run_alphafold3.py --flagfile ${chunk}/chunk.flags --output_dir AF3_data_multimer/ \$(cat ${chunk}/other.flags)
     cp .command.log logs_AF3/${chunk}.log
     """

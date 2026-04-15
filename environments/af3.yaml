@@ -10,4 +10,4 @@ dependencies:
   - pip
   - pip:
     - biopython==1.87
-    - git+https://github.com/google-deepmind/alphafold3.git
+    - git+https://github.com/google-deepmind/alphafold3.git@2e3703e82a9592efbb3fa76ca9e0714aedabacdb

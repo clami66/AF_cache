@@ -10,10 +10,10 @@ workflow AF3 {
     // convert
     af_data_path = convert_alignments(alignments_path)
     fastas = channel.fromPath("${fasta_dir}/*.fasta")
-    jsons = parse_features_af3(fastas, af_data_path, params.af3_db_dir).collect()
+    jsons = parse_features_af3(fastas, af_data_path).collect()
     json_cache = collect_jsons(jsons)
 
     // AF
-    jobs = format_jobs(fasta_dir, json_cache, pair_list, params.af3_db_dir).collect().flatten()
-    run_af3_jobs(jobs, json_cache, params.af3_db_dir)
+    jobs = format_jobs(fasta_dir, json_cache, pair_list).collect().flatten()
+    run_af3_jobs(jobs, json_cache)
 }

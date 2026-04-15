@@ -36,9 +36,14 @@ flags.DEFINE_string(
     "alphafold3_data/",
     "Path to the directory containing the databases.",
 )
+_PDB_DATABASE_PATH = flags.DEFINE_string(
+    "pdb_database_path",
+    "${DB_DIR}/mmcif_files",
+    "PDB database directory with mmCIF files path, used for template search.",
+)
 _SEQRES_DATABASE_PATH = flags.DEFINE_string(
     "seqres_database_path",
-    "${DB_DIR}/pdb_seqres_2022_09_28.fast",
+    "${DB_DIR}/pdb_seqres_2022_09_28.fasta",
     "PDB sequence database path, used for template search.",
 )
 _HMMSEARCH_BINARY_PATH = flags.DEFINE_string(
@@ -92,7 +97,7 @@ def main(_):
 
     _templates_config = msa_config.TemplatesConfig(
         template_tool_config=msa_config.TemplateToolConfig(
-            database_path=f"{FLAGS.db_dir}/pdb_seqres_2022_09_28.fasta",
+            database_path=FLAGS.seqres_database_path,
             chain_poly_type="polypeptide(L)",
             hmmsearch_config=msa_config.HmmsearchConfig(
                 hmmsearch_binary_path=FLAGS.hmmsearch_binary_path,
@@ -140,7 +145,7 @@ def main(_):
                 input_msa_a3m="".join(open(paired_msa_path, "r").readlines()),
                 run_template_search=True,
                 templates_config=_templates_config,
-                pdb_database_path=f"{FLAGS.db_dir}/mmcif_files",
+                pdb_database_path=FLAGS.pdb_database_path,
             )
 
             templates = [
