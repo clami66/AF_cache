@@ -14,6 +14,7 @@ def get_fasta_record(fasta_file):
         return None
     return record
 
+
 def main(args):
     fasta_list = glob.glob(f"{args.fasta}/*.fasta")
 
@@ -34,15 +35,18 @@ def main(args):
             pf.write(f">{id}\n")
             pf.write(f"{fr}\n")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Merges multiple inputs to fasta files into a single"
     )
-    parser.add_argument(
-        "fasta", help="Directory containing multiple fasta files"
-    )
+    parser.add_argument("fasta", help="Directory containing multiple fasta files")
     parser.add_argument("out_fasta", help="Path to merged fasta file")
-    parser.add_argument("--unique", action="store_true", help="Remove duplicate sequences in merged file")
+    parser.add_argument(
+        "--unique",
+        action="store_true",
+        help="Remove duplicate sequences in merged file",
+    )
     args = parser.parse_args()
 
     main(args)
