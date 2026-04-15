@@ -48,7 +48,6 @@ process parse_features_af2 {
 }
 
 process format_jobs {
-    publishDir "${params.output_dir}"
 
     input:
     path fasta
@@ -60,8 +59,7 @@ process format_jobs {
     path pdb_seqres_database_path, stageAs: 'seqres/*'
 
     output:
-    path "AF_data_multimer/", emit: 'dir'
-    path "sbatch_scripts/**.sh", emit: sh
+    path "chunk_*"
 
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
@@ -86,16 +84,25 @@ process format_jobs {
 }
 
 process run_af2_jobs {
+    publishDir "${params.output_dir}", mode: 'copy'
+
     input:
-    path sbatch_script
+    path chunk
     path cache
     path template_mmcif_dir, stageAs: 'mmcif/*'
     path obsolete_pdbs_path, stageAs: 'obsolete/*'
     path pdb_seqres_database_path, stageAs: 'seqres/*'
 
+    output:
+    path "AF_data_multimer/*"
+    path "logs_AF2/${chunk}.log"
+
     script:
     """
-    sh ${sbatch_script}
+    mkdir AF_data_multimer
+    mkdir logs_AF2
+    run_alphafold2.py --flagfile ${chunk}/chunk.flags --output_dir AF_data_multimer/ \$(cat ${chunk}/other.flags)
+    cp .command.log logs_AF2/${chunk}.log
     """
 }
 

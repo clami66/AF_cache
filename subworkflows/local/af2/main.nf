@@ -15,6 +15,6 @@ workflow AF2 {
 
     // AF
     af2_data_ready = get_params()
-    sbatch_scripts = format_jobs(fasta_dir, pickle_cache, pair_list, af2_data_ready, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).sh.collect().flatten()
-    run_af2_jobs(sbatch_scripts, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
+    jobs = format_jobs(fasta_dir, pickle_cache, pair_list, af2_data_ready, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).collect().flatten()
+    run_af2_jobs(jobs, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
 }

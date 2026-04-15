@@ -39,7 +39,6 @@ process parse_features_af3 {
 }
 
 process format_jobs {
-    publishDir "${params.output_dir}"
 
     input:
     path fasta
@@ -48,8 +47,7 @@ process format_jobs {
     path af3_db_dir
 
     output:
-    path "AF_data_multimer/", emit: 'dir'
-    path "sbatch_scripts/**.sh", emit: sh
+    path "chunk_*"
 
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
@@ -80,13 +78,22 @@ process collect_jsons {
 }
 
 process run_af3_jobs {
+    publishDir "${params.output_dir}", mode: 'copy'
+
     input:
-    path sbatch_script
+    path chunk
     path cache
     path af3_db_dir
 
+    output:
+    path "AF3_data_multimer/*"
+    path "logs_AF3/${chunk}.log"
+
     script:
     """
-    sh ${sbatch_script}
+    mkdir AF3_data_multimer
+    mkdir logs_AF3
+    run_alphafold3.py --flagfile ${chunk}/chunk.flags --output_dir AF3_data_multimer/ \$(cat ${chunk}/other.flags)
+    cp .command.log logs_AF3/${chunk}.log
     """
 }

@@ -14,6 +14,6 @@ workflow AF3 {
     json_cache = collect_jsons(jsons)
 
     // AF
-    sbatch_scripts = format_jobs(fasta_dir, json_cache, pair_list, params.af3_db_dir).sh.collect().flatten()
-    run_af3_jobs(sbatch_scripts, json_cache, params.af3_db_dir)
+    jobs = format_jobs(fasta_dir, json_cache, pair_list, params.af3_db_dir).collect().flatten()
+    run_af3_jobs(jobs, json_cache, params.af3_db_dir)
 }

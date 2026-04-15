@@ -11,14 +11,6 @@ from itertools import combinations_with_replacement, combinations, product
 
 from Bio import SeqIO
 
-def bash_header():
-
-    return f"""#!/bin/bash
-export TF_FORCE_UNIFIED_MEMORY='1'
-export XLA_PYTHON_CLIENT_MEM_FRACTION='6.0'
-
-"""
-
 
 def get_fasta_record(fasta_file):
     try:
@@ -51,13 +43,6 @@ def get_records_from_dir(fasta_files: list):
         if record:
             fasta_records.append((record, fasta_path.stem))
     return fasta_records
-
-
-def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, other_args=""):
-    scripts_path = os.path.dirname(os.path.realpath(__file__))
-    pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
-    pad_flag = f"--pad_to_size {pad_to_size}" if pad_to_size else ""
-    return f"run_alphafold2.py --flagfile {flagfile} --output_dir {out_dir} --fasta_paths {','.join(target_list)} {pickle_flag} {pad_flag} {' '.join(other_args)}"
 
 
 def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, overwrite_output=True, include_homomers=True, both_directions=False):
@@ -95,6 +80,7 @@ def define_pairs(fasta_records, out_dir, splits, pair_list, write_fastas=False, 
             pair_bins[pair_bin].append((str(pair_fasta), pair_size))
     return pair_bins
 
+
 def main(args, af_args):
     splits = [int(split) for split in args.splits]
     splits.append(inf)
@@ -119,10 +105,7 @@ def main(args, af_args):
                                 include_homomers=args.include_homomers, 
                                 both_directions=args.both_directions)
 
-    Path("sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
-    estimated_gpu_runtime = 0
-    num_jobs = 0
     for (max_len, this_bin), max_size in zip(binned_pairs.items(), max_job_size):
         num_targets = len(this_bin)
         for chunk_n, index in enumerate(range(0, num_targets, max_size)):
@@ -132,17 +115,23 @@ def main(args, af_args):
 
             pad_to_size = f"{max_len},{max_depth}" if max_size > 1 else f"{target_sizes[0]},{max_depth}"
 
-            num_jobs += 1
-            command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
-            log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
-            with open(command_file, "w") as command:
-                command.write(bash_header())
-                command.write(format_af_command([target[0] for target in target_chunk], out_dir,
-                                                pickle_dir=args.pickle_dir,
-                                                pad_to_size=pad_to_size,
-                                                flagfile=args.flagfile,
-                                                other_args=af_args))
-                command.write("\n")
+            input_fasta_dir = Path(f"chunk_{max_len}_{chunk_n}")
+            input_fasta_dir.mkdir(parents=True, exist_ok=True)
+
+            flag_file = Path(input_fasta_dir, "chunk.flags")
+            other_flags = Path(input_fasta_dir, "other.flags")
+
+            with open(flag_file, "w") as flags:
+                fasta_inputs = [f"{input_fasta_dir}/{os.path.basename(tf)}" for tf in target_fastas]
+                flags.write(f"--fasta_paths={','.join(fasta_inputs)}\n")
+                for target_fasta, fasta_input in zip(target_fastas, fasta_inputs):
+                    os.symlink(target_fasta, fasta_input)
+                flags.write(f"--pad_to_size={pad_to_size}\n")
+                flags.write(f"--pickle_cache={args.pickle_dir}\n")
+                flags.write(f"--flagfile={args.flagfile}\n")
+
+            with open(other_flags, "w") as flags:
+                flags.write(f"{' '.join(af_args)}")
 
 
 if __name__ == '__main__':

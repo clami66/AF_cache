@@ -14,12 +14,6 @@ from Bio import SeqIO
 from string import ascii_uppercase, ascii_lowercase
 ascii_upperlower = ascii_uppercase + ascii_lowercase
 
-def bash_header():
-
-    return f"""#!/bin/bash
-
-"""
-
 
 def get_fasta_record(fasta_file):
     try:
@@ -53,10 +47,6 @@ def get_records_from_dir(fasta_files: list):
         if record:
             fasta_records.append((record, fasta_path.stem))
     return fasta_records
-
-
-def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and largely dependent on the GPU speed/VRAM size
-    return seqlen**2 * lam / 3600
 
 
 def format_af_command(json_input_dir, out_dir, flagfiles=None, other_args=""):
@@ -141,7 +131,6 @@ def main(args, af_args):
     Path("sbatch_scripts").mkdir(parents=True, exist_ok=True)
     Path(out_dir, "logs").mkdir(parents=True, exist_ok=True)
 
-    num_jobs = 0
     for (max_len, this_bin), max_size in zip(multimers.items(), max_job_size):
         num_targets = len(this_bin)
         for chunk_n, index in enumerate(range(0, num_targets, max_size)):
@@ -150,26 +139,29 @@ def main(args, af_args):
             target_sizes = [target[1] for target in target_chunk]
 
             # a directory of jsons to be passed to an AF3 call so that the proteins are run in the same experiment
-            input_json_dir = Path(out_dir, "bucketed_jsons", f"{max_len}_{chunk_n}")
+            input_json_dir = Path(f"chunk_{max_len}_{chunk_n}")
             input_json_dir.mkdir(parents=True, exist_ok=True)
 
+            flag_file = Path(input_json_dir, "chunk.flags")
+            other_flags = Path(input_json_dir, "other.flags")
+
+            #f"run_alphafold3.py --output_dir {out_dir} --input_dir {json_input_dir} {flag_param} {' '.join(other_args)}"
             for target_json in target_jsons:
                 os.symlink(target_json, f"{input_json_dir}/{os.path.basename(target_json)}")
-            num_jobs += 1
 
-            command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
-            log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
-            with open(command_file, "w") as command:
-                command.write(bash_header())
-                command.write(format_af_command(str(input_json_dir), f"{out_dir}/{max_len}_{chunk_n}", flagfiles=args.flagfiles, other_args=af_args))
-                command.write("\n")
+            with open(flag_file, "w") as flags:
+                flags.write(f"--input_dir={input_json_dir}\n")
+                flags.write(f"--flagfile={args.flagfile}\n" if args.flagfile is not None else "")
+
+            with open(other_flags, "w") as flags:
+                flags.write(f"{' '.join(af_args)}")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
     parser.add_argument("in_path", help = "Path to the directory containing the fasta files")
     parser.add_argument("out_dir", help = "Path to output directory (as will be used in AlphaFold)")
-    parser.add_argument("--flagfiles", nargs="+", help = "Flagfile with parameters to AF", default=None)
+    parser.add_argument("--flagfile", help = "Flagfile with parameters to AF3", default=None)
     parser.add_argument("--file_list", help = "Path to file containing a list of files to run (if not desire all against all)",default="")
     parser.add_argument("--list_separator", default=" ", help="Character used to separate protein pairs in file list (--file_list)")
     parser.add_argument("--include_homomers", action="store_true", default=False, help="Also include homomers")
