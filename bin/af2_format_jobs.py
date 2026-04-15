@@ -53,10 +53,6 @@ def get_records_from_dir(fasta_files: list):
     return fasta_records
 
 
-def estimate_gpu_runtime(seqlen, lam=0.0001): # this is a rough estimate and largely dependent on the GPU speed/VRAM size
-    return seqlen**2 * lam / 3600
-
-
 def format_af_command(target_list, out_dir, pad_to_size=None, pickle_dir=None, flagfile=None, other_args=""):
     scripts_path = os.path.dirname(os.path.realpath(__file__))
     pickle_flag = f"--pickle_cache {pickle_dir}" if pickle_dir else ""
@@ -137,21 +133,17 @@ def main(args, af_args):
             pad_to_size = f"{max_len},{max_depth}" if max_size > 1 else f"{target_sizes[0]},{max_depth}"
 
             num_jobs += 1
-            estimated_gpu_runtime += 120/3600 # ~2 minutes per job to compile models etc
-            if not args.estimate_gpu_runtime:
-                command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
-                log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
-                with open(command_file, "w") as command:
-                    command.write(bash_header())
-                    command.write(format_af_command([target[0] for target in target_chunk], out_dir,
-                                                    pickle_dir=args.pickle_dir,
-                                                    pad_to_size=pad_to_size,
-                                                    flagfile=args.flagfile,
-                                                    other_args=af_args))
-                    command.write("\n")
+            command_file = Path("sbatch_scripts", f"{max_len}_{chunk_n}.sh")
+            log_file = Path(out_dir, "logs", f"{max_len}_{chunk_n}.log")
+            with open(command_file, "w") as command:
+                command.write(bash_header())
+                command.write(format_af_command([target[0] for target in target_chunk], out_dir,
+                                                pickle_dir=args.pickle_dir,
+                                                pad_to_size=pad_to_size,
+                                                flagfile=args.flagfile,
+                                                other_args=af_args))
+                command.write("\n")
 
-    if args.estimate_gpu_runtime:
-        print(f"(Under)estimated GPU core hours: {int(estimated_gpu_runtime)} core hours for {num_jobs} jobs")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Format all vs. all AlphaFold job commands given a set of fasta files")
@@ -167,7 +159,6 @@ if __name__ == '__main__':
     parser.add_argument("--overwrite_output", action="store_true", default=False, help="If previously generated dimer predictions should be overwritten")
     parser.add_argument("--splits", nargs="+", default=[400, 800, 1000, 1200, 1400, 1600, 4500], help="Boundaries (sum of sequences length) to group multiple inference jobs")
     parser.add_argument("--max_job_size", nargs="+", default=[1000, 500, 100, 100, 100, 50, 1], help="When grouping jobs by length (with --splits), max number of targets that should run on the same AF python command for each split")
-    parser.add_argument("--estimate_gpu_runtime", action="store_true")
 
     args, unknownargs = parser.parse_known_args()
 
