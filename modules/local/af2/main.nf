@@ -48,7 +48,6 @@ process parse_features_af2 {
 }
 
 process format_jobs {
-
     input:
     path fasta
     path pickle_cache
@@ -64,7 +63,7 @@ process format_jobs {
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
     def skip_templates = params.skip_templates ? "--notemplates" : ''
-    def include_homomers = params.include_homomers ? '--include_homomers': ''
+    def include_homomers = params.include_homomers ? '--include_homomers' : ''
     """
     af2_format_jobs.py ${fasta} AF_data_multimer/ \\
                         --pickle_dir ${pickle_cache} \\

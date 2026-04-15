@@ -39,7 +39,6 @@ process parse_features_af3 {
 }
 
 process format_jobs {
-
     input:
     path fasta
     path json_cache
@@ -51,7 +50,7 @@ process format_jobs {
 
     script:
     def plist = pair_list ? "--file_list ${pair_list}" : ''
-    def include_homomers = params.include_homomers ? '--include_homomers': ''
+    def include_homomers = params.include_homomers ? '--include_homomers' : ''
     """
     af3_format_jobs.py ${fasta} AF_data_multimer/ \\
                         --json_dir ${json_cache} \\

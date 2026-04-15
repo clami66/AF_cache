@@ -9,7 +9,7 @@ workflow AF2 {
     main:
     // convert
     af_data_path = convert_alignments(alignments_path)
-    fastas = channel.fromPath("$fasta_dir/*.fasta")
+    fastas = channel.fromPath("${fasta_dir}/*.fasta")
     pickles = parse_features_af2(fastas, af_data_path, params.mmseqs_db, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).pkl.collect()
     pickle_cache = collect_pickles(pickles)
 

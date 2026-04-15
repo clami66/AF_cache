@@ -9,7 +9,7 @@ workflow AF3 {
     main:
     // convert
     af_data_path = convert_alignments(alignments_path)
-    fastas = channel.fromPath("$fasta_dir/*.fasta")
+    fastas = channel.fromPath("${fasta_dir}/*.fasta")
     jsons = parse_features_af3(fastas, af_data_path, params.af3_db_dir).collect()
     json_cache = collect_jsons(jsons)
 
