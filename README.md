@@ -1,6 +1,6 @@
 # AF_cache: fast inference of AlphaFold2 / AlphaFold3 predictions in large-scale studies
 
-![H1111](img/timings.png)
+![H1111](img/figure2_240426_cropped-1.png)
 
 ## Setup
 
@@ -243,3 +243,8 @@ withName:'convert_alignments_af2|convert_alignments_af2|parse_features_af2|parse
 Consult the Nextlow docs for more information about setting up different executors/schedulers [here](https://www.nextflow.io/docs/latest/reference/config.html#executor).
 
 </details>
+
+## Pipeline Figure
+
+![H1111](img/pipeline_figure_020626-1.png)
+
