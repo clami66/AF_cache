@@ -1,4 +1,5 @@
 include { convert_alignments ; parse_features_af3 ; collect_jsons ; format_jobs ; run_af3_jobs } from '../../../modules/local/af3'
+include { run_ipsae } from '../../../modules/local/ipsae'
 
 workflow AF3 {
     take:
@@ -15,5 +16,11 @@ workflow AF3 {
 
     // AF
     jobs = format_jobs(fasta_dir, json_cache, pair_list).collect().flatten()
-    run_af3_jobs(jobs, json_cache)
+    predictions = run_af3_jobs(jobs, json_cache)
+
+    // optional ipSAE scoring of the predicted complexes
+    if (params.run_ipsae) {
+        pair_dirs = predictions[0].flatten().collect()
+        run_ipsae(pair_dirs, 'af3')
+    }
 }

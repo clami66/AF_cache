@@ -1,4 +1,5 @@
 include { convert_alignments ; parse_features_af2 ; collect_pickles ; get_params ; format_jobs ; run_af2_jobs } from '../../../modules/local/af2'
+include { run_ipsae } from '../../../modules/local/ipsae'
 
 workflow AF2 {
     take:
@@ -16,5 +17,11 @@ workflow AF2 {
     // AF
     af2_data_ready = get_params()
     jobs = format_jobs(fasta_dir, pickle_cache, pair_list, af2_data_ready, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path).collect().flatten()
-    run_af2_jobs(jobs, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
+    predictions = run_af2_jobs(jobs, pickle_cache, params.template_mmcif_dir, params.obsolete_pdbs_path, params.pdb_seqres_database_path)
+
+    // optional ipSAE scoring of the predicted complexes
+    if (params.run_ipsae) {
+        pair_dirs = predictions[0].flatten().collect()
+        run_ipsae(pair_dirs, 'af2')
+    }
 }
