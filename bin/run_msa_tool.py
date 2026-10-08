@@ -51,6 +51,9 @@ parser.add_argument(
 parser.add_argument(
     "--max_accept", default=100000, help="MMseqs2 max accepted alignments"
 )
+parser.add_argument("--db_load_mode", type=int, default=0,
+                    help="Database preload mode 0: auto, 1: fread, 2: mmap, 3: mmap+touch")
+
 
 args = parser.parse_args()
 
@@ -97,6 +100,7 @@ elif alignment_type in ["mmseqs", "mmseqs2"]:
         gpu=args.gpu,
         gpu_server=args.gpu_server,
         max_accept=args.max_accept,
+        db_load_mode=args.db_load_mode,
     )
 
 

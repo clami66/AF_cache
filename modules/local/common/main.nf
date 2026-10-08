@@ -74,6 +74,7 @@ process mmseqs_align {
                         --mmseqs ${params.mmseqs_bin} \\
                         --out_dir ./ \\
                         --n_cpu ${n_cpu} \\
+                        --db_load_mode ${params.mmseqs_db_load_mode} \\
                         ${use_gpu} \\
                         ${use_env}
     fi
