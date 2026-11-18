@@ -1,5 +1,5 @@
 process run_ipsae {
-    publishDir "${params.output_dir}/metrics", mode: 'copy'
+    publishDir "${params.output_dir}/metrics", mode: params.publish_mode
 
     input:
     path predictions, stageAs: 'predictions/*'
