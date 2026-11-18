@@ -159,9 +159,13 @@ def _worker(task):
     )
 
 
-# Files ipsae.py reads; the rest of an archive (features.pkl, embeddings, ...)
-# is never extracted.
-SCORING_FILES = ["*.json", "*.pdb", "*.cif", "result_*.pkl"]
+# Exactly the files get_af2_models / get_af3_models look for; the rest of an
+# archive (features.pkl, unrelaxed PDBs, embeddings, ...) is never extracted.
+# Patterns allow the optional "<pair>--" prefix on AF2 PDBs and pickles.
+SCORING_FILES = [
+    "ranking_debug.json", "*ranked_*.pdb", "*result_*.pkl",   # AF2
+    "*_model.cif", "*_confidences.json",                      # AF3 (incl. summary)
+]
 
 
 def extract_for_scoring(archive: Path, dest: Path):
