@@ -1,5 +1,5 @@
 process convert_alignments {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path alignments
@@ -14,7 +14,7 @@ process convert_alignments {
 }
 
 process parse_features_af2 {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
     cache 'lenient'
 
     input:
@@ -83,7 +83,7 @@ process format_jobs {
 }
 
 process run_af2_jobs {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path chunk
@@ -101,6 +101,9 @@ process run_af2_jobs {
     mkdir AF_data_multimer
     mkdir logs_AF2
     run_alphafold2.py --flagfile ${chunk}/chunk.flags --output_dir AF_data_multimer/ \$(cat ${chunk}/other.flags)
+    if ${params.pack_outputs}; then
+        pack_predictions.py AF_data_multimer/ AF_data_multimer/${chunk}.zip
+    fi
     cp .command.log logs_AF2/${chunk}.log
     """
 }
