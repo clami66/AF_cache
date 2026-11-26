@@ -1,5 +1,5 @@
 process convert_alignments {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path alignments
@@ -14,7 +14,7 @@ process convert_alignments {
 }
 
 process parse_features_af3 {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path fasta
@@ -77,7 +77,7 @@ process collect_jsons {
 }
 
 process run_af3_jobs {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path chunk
@@ -93,6 +93,9 @@ process run_af3_jobs {
     mkdir logs_AF3
     check_ccd.py
     run_alphafold3.py --flagfile ${chunk}/chunk.flags --output_dir AF3_data_multimer/ \$(cat ${chunk}/other.flags)
+    if ${params.pack_outputs}; then
+        pack_predictions.py AF3_data_multimer/ AF3_data_multimer/${chunk}.zip
+    fi
     cp .command.log logs_AF3/${chunk}.log
     """
 }

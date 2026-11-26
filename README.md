@@ -244,6 +244,39 @@ Consult the Nextlow docs for more information about setting up different executo
 
 </details>
 
+<details>
+<summary>Reducing the number of output files</summary>
+
+Every prediction is a directory of many files, and by default each file exists twice: once in nextflow's `work/` directory and once in the output directory. Large all-vs-all runs can therefore exceed file-count quotas on cluster file systems. Three settings help:
+
+`--pack_outputs` stores the predictions of each job chunk in a single zip archive, `AF_data_multimer/<chunk>.zip` (AF2) or `AF3_data_multimer/<chunk>.zip` (AF3), instead of one directory per pair. Paths inside the archive are the same as before (`<pair>/ranked_0.pdb`, ...), and `--run_ipsae` reads the archives directly:
+
+```
+nextflow AF_cache.nf --fasta test_data/inputs/fasta/ --pack_outputs
+```
+
+The archives can be read without unpacking them:
+
+```
+unzip -l outputs/AF_data_multimer/chunk_500_0.zip                                  # list contents
+unzip outputs/AF_data_multimer/chunk_500_0.zip 'P1--P2/*' -d extracted/            # one pair
+unzip -p outputs/AF_data_multimer/chunk_500_0.zip P1--P2/ranked_0.pdb > model.pdb  # one file
+```
+
+or from Python:
+
+```python
+import zipfile
+with zipfile.ZipFile("outputs/AF_data_multimer/chunk_500_0.zip") as zf:
+    pdb = zf.read("P1--P2/ranked_0.pdb").decode()
+```
+
+`--publish_mode link` hard-links the outputs from `work/` into the output directory instead of copying them, so each file is stored once. `work/` and the output directory must be on the same file system.
+
+`cleanup = true` in `nextflow.config` deletes `work/` after a successful run. A run can then no longer be resumed with `-resume`, so only use it once the results are final.
+
+</details>
+
 ## Pipeline Figure
 
 ![H1111](img/pipeline_figure_020626-1.png)

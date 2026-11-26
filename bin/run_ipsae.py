@@ -31,16 +31,22 @@ AF3 layout (one dir per pair):
             <pair>_seed-<s>_sample-<i>_model.cif
             <pair>_seed-<s>_sample-<i>_confidences.json
             <pair>_seed-<s>_sample-<i>_summary_confidences.json
+
+With --pack_outputs the pair dirs are stored in one <chunk>.zip per job chunk
+(see pack_predictions.py). Each archive is extracted to a temporary dir one at
+a time, keeping only the files ipsae.py needs, and scored like the dirs above.
 """
 
 import argparse
 import csv
+import fnmatch
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
@@ -153,29 +159,28 @@ def _worker(task):
     )
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Batch ipSAE scoring for AF_cache.")
-    parser.add_argument("--predictions-dir", required=True, type=Path,
-                        help="Directory whose subdirectories are per-pair AF outputs")
-    parser.add_argument("--ipsae-script", required=True, type=Path,
-                        help="Path to ipsae.py")
-    parser.add_argument("--output", required=True, type=Path, help="Output TSV file")
-    parser.add_argument("--backend", choices=["af2", "af3", "auto"], default="auto",
-                        help="Prediction backend (default: auto-detect per pair)")
-    parser.add_argument("--python", type=str, default=None,
-                        help="Python interpreter for ipsae.py (default: same as this script)")
-    parser.add_argument("--pae-cutoff", type=float, default=10.0)
-    parser.add_argument("--dist-cutoff", type=float, default=10.0)
-    parser.add_argument("--workers", type=int, default=os.cpu_count())
-    args = parser.parse_args()
+# Exactly the files get_af2_models / get_af3_models look for; the rest of an
+# archive (features.pkl, unrelaxed PDBs, embeddings, ...) is never extracted.
+# Patterns allow the optional "<pair>--" prefix on AF2 PDBs and pickles.
+SCORING_FILES = [
+    "ranking_debug.json", "*ranked_*.pdb", "*result_*.pkl",   # AF2
+    "*_model.cif", "*_confidences.json",                      # AF3 (incl. summary)
+]
 
-    run_dirs = sorted(d for d in args.predictions_dir.iterdir() if d.is_dir())
-    if not run_dirs:
-        sys.exit(f"No prediction subdirectories found in {args.predictions_dir}")
 
+def extract_for_scoring(archive: Path, dest: Path):
+    """Extract the scoring files of a packed chunk; return its pair dirs."""
+    with zipfile.ZipFile(archive) as zf:
+        members = [m for m in zf.namelist()
+                   if any(fnmatch.fnmatch(Path(m).name, p) for p in SCORING_FILES)]
+        zf.extractall(dest, members)
+    return sorted(d for d in dest.iterdir() if d.is_dir())
+
+
+def score_run_dirs(run_dirs, args, executor, results):
+    """Score every model of every pair in run_dirs; append scores to results."""
     # Build a flat task list across all pairs / models.
     tasks = []
-    per_pair_expected = defaultdict(int)
     for run_dir in run_dirs:
         pair = run_dir.name
         backend = args.backend if args.backend != "auto" else detect_backend(run_dir)
@@ -190,7 +195,6 @@ def main():
             print(f"SKIP {pair}: no scorable models found")
             continue
         for idx, (structure, pae, extra) in enumerate(models):
-            per_pair_expected[pair] += 1
             tasks.append({
                 "pair": pair, "model_idx": idx,
                 "ipsae_script": str(args.ipsae_script),
@@ -200,29 +204,61 @@ def main():
                 "python_exe": args.python,
             })
 
-    print(f"Submitting {len(tasks)} models across {len(per_pair_expected)} pairs "
+    n_pairs = len({t["pair"] for t in tasks})
+    print(f"Submitting {len(tasks)} models across {n_pairs} pairs "
           f"using {args.workers} workers...")
+
+    futures = {executor.submit(_worker, t): t for t in tasks}
+    for future in as_completed(futures):
+        t = futures[future]
+        label = f"{t['pair']}/model_{t['model_idx']}"
+        try:
+            val = future.result()
+            results[t["pair"]].append(val)
+            print(f"  done {label}  ipsae={val:.4f}")
+        except Exception as e:
+            print(f"  WARN {label}: {e}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Batch ipSAE scoring for AF_cache.")
+    parser.add_argument("--predictions-dir", required=True, type=Path,
+                        help="Directory whose subdirectories are per-pair AF outputs, "
+                             "and/or holding packed <chunk>.zip archives")
+    parser.add_argument("--ipsae-script", required=True, type=Path,
+                        help="Path to ipsae.py")
+    parser.add_argument("--output", required=True, type=Path, help="Output TSV file")
+    parser.add_argument("--backend", choices=["af2", "af3", "auto"], default="auto",
+                        help="Prediction backend (default: auto-detect per pair)")
+    parser.add_argument("--python", type=str, default=None,
+                        help="Python interpreter for ipsae.py (default: same as this script)")
+    parser.add_argument("--pae-cutoff", type=float, default=10.0)
+    parser.add_argument("--dist-cutoff", type=float, default=10.0)
+    parser.add_argument("--workers", type=int, default=os.cpu_count())
+    args = parser.parse_args()
+
+    entries = sorted(args.predictions_dir.iterdir())
+    run_dirs = [e for e in entries if e.is_dir()]
+    archives = [e for e in entries if e.is_file() and e.suffix == ".zip"]
+    if not run_dirs and not archives:
+        sys.exit(f"No prediction subdirectories or archives found in {args.predictions_dir}")
 
     results = defaultdict(list)
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
-        futures = {executor.submit(_worker, t): t for t in tasks}
-        for future in as_completed(futures):
-            t = futures[future]
-            label = f"{t['pair']}/model_{t['model_idx']}"
-            try:
-                val = future.result()
-                results[t["pair"]].append(val)
-                print(f"  done {label}  ipsae={val:.4f}")
-            except Exception as e:
-                print(f"  WARN {label}: {e}")
+        if run_dirs:
+            score_run_dirs(run_dirs, args, executor, results)
+        for archive in archives:
+            print(f"Extracting {archive.name}")
+            with tempfile.TemporaryDirectory(prefix="ipsae_") as tmp:
+                score_run_dirs(extract_for_scoring(archive, Path(tmp)), args,
+                               executor, results)
 
     # A pair gets multi-model columns only if it actually has >1 scored model.
     multi_model = any(len(v) > 1 for v in results.values())
 
     rows = []
-    for run_dir in run_dirs:
-        pair = run_dir.name
-        vals = results.get(pair)
+    for pair in sorted(results):
+        vals = results[pair]
         if not vals:
             continue
         if multi_model:

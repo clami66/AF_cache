@@ -19,7 +19,7 @@ process setup_mmseqs2_dbs {
 }
 
 process split_fasta {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path fasta
@@ -35,7 +35,7 @@ process split_fasta {
 }
 
 process merge_fastas {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path fastas
@@ -50,7 +50,7 @@ process merge_fastas {
 }
 
 process mmseqs_align {
-    publishDir "${params.output_dir}", mode: 'copy'
+    publishDir "${params.output_dir}", mode: params.publish_mode
 
     input:
     path fasta
